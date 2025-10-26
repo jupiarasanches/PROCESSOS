@@ -50,7 +50,8 @@ export default function ProcessModal({
     recurring_notification_enabled: false,
     recurring_notification_frequency: 'daily',
     recurring_notification_email: '',
-    recurring_notification_whatsapp: false
+    recurring_notification_whatsapp: false,
+    recurring_notification_time: '09:00' // Nova propriedade para horário
   });
 
   const [technicians, setTechnicians] = useState([]);
@@ -65,7 +66,7 @@ export default function ProcessModal({
     { value: '2_hours', label: '2 em 2 horas', description: 'A cada 2 horas' },
     { value: '4_hours', label: '4 em 4 horas', description: 'A cada 4 horas' },
     { value: '8_hours', label: '8 em 8 horas', description: 'A cada 8 horas' },
-    { value: 'daily', label: 'Diariamente', description: 'Uma vez por dia' },
+    { value: 'daily', label: 'Diariamente', description: 'Uma vez por dia no horário escolhido' },
     { value: '2_days', label: '2 em 2 dias', description: 'A cada 2 dias' },
     { value: '3_days', label: '3 em 3 dias', description: 'A cada 3 dias' },
     { value: 'weekly', label: 'Semanalmente', description: 'Uma vez por semana' },
@@ -91,7 +92,8 @@ export default function ProcessModal({
         recurring_notification_enabled: false,
         recurring_notification_frequency: 'daily',
         recurring_notification_email: '',
-        recurring_notification_whatsapp: false
+        recurring_notification_whatsapp: false,
+        recurring_notification_time: '09:00'
       });
       setDocuments([]);
       loadTechnicians();
@@ -236,7 +238,8 @@ export default function ProcessModal({
       recurring_notification_enabled: false,
       recurring_notification_frequency: 'daily',
       recurring_notification_email: '',
-      recurring_notification_whatsapp: false
+      recurring_notification_whatsapp: false,
+      recurring_notification_time: '09:00'
     });
     setDocuments([]);
     setErrors({});
@@ -448,13 +451,12 @@ export default function ProcessModal({
                   <MessageCircle className="w-5 h-5 text-green-600" />
                   <div>
                     <Label className="text-sm font-medium text-gray-700">WhatsApp</Label>
-                    <p className="text-xs text-gray-500">Notificar por WhatsApp (em breve)</p>
+                    <p className="text-xs text-gray-500">Notificar por WhatsApp</p>
                   </div>
                 </div>
                 <Switch
                   checked={formData.deadline_notification_whatsapp}
                   onCheckedChange={(checked) => handleInputChange('deadline_notification_whatsapp', checked)}
-                  disabled={true}
                 />
               </div>
             </div>
@@ -560,6 +562,25 @@ export default function ProcessModal({
                   </p>
                 </div>
 
+                {/* Seleção de horário - aparece apenas para frequência diária */}
+                {formData.recurring_notification_frequency === 'daily' && (
+                  <div>
+                    <Label htmlFor="notification_time" className="text-sm font-medium text-blue-900">
+                      Horário de preferência para notificação diária
+                    </Label>
+                    <Input
+                      id="notification_time"
+                      type="time"
+                      value={formData.recurring_notification_time}
+                      onChange={(e) => handleInputChange('recurring_notification_time', e.target.value)}
+                      className="mt-1 border-blue-300 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-blue-600 mt-1">
+                      Você receberá as notificações diárias todos os dias às {formData.recurring_notification_time}
+                    </p>
+                  </div>
+                )}
+
                 {/* Canais de notificação recorrente */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* E-mail recorrente */}
@@ -575,17 +596,17 @@ export default function ProcessModal({
                   </div>
 
                   {/* WhatsApp recorrente */}
-                  <div className="flex items-center justify-between p-3 border border-gray-300 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between p-3 border border-green-300 rounded-lg bg-white">
                     <div className="flex items-center gap-3">
-                      <MessageCircle className="w-5 h-5 text-gray-400" />
+                      <MessageCircle className="w-5 h-5 text-green-600" />
                       <div>
-                        <Label className="text-sm font-medium text-gray-400">WhatsApp</Label>
-                        <p className="text-xs text-gray-400">Em breve</p>
+                        <Label className="text-sm font-medium text-green-900">WhatsApp</Label>
+                        <p className="text-xs text-green-600">Receber por WhatsApp</p>
                       </div>
                     </div>
                     <Switch
-                      checked={false}
-                      disabled={true}
+                      checked={formData.recurring_notification_whatsapp}
+                      onCheckedChange={(checked) => handleInputChange('recurring_notification_whatsapp', checked)}
                     />
                   </div>
                 </div>
@@ -611,7 +632,8 @@ export default function ProcessModal({
                 {/* Informação adicional */}
                 <div className="bg-blue-100 p-3 rounded-lg border border-blue-200">
                   <p className="text-xs text-blue-800">
-                    <strong>💡 Como funciona:</strong> Você receberá e-mails automáticos sobre o progresso deste processo na frequência escolhida.
+                    <strong>💡 Como funciona:</strong> Você receberá e-mails automáticos sobre o progresso deste processo na frequência escolhida
+                    {formData.recurring_notification_frequency === 'daily' && ` às ${formData.recurring_notification_time}`}.
                     As notificações incluirão status atual, próximos passos e informações importantes.
                     Você pode desativar essas notificações a qualquer momento editando o processo.
                   </p>

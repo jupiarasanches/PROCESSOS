@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -13,7 +12,6 @@ import {
   Bell,
   Search,
   LogOut,
-  DollarSign,
   Database,
   Calendar
 } from "lucide-react";
@@ -54,7 +52,6 @@ export default function Layout({ children, currentPageName }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Define navigation items inside the component to use currentPageName
   const navigation = [
     {
       name: "Dashboard",
@@ -92,13 +89,6 @@ export default function Layout({ children, currentPageName }) {
       tooltip: "Visualizar todas as instâncias de processos"
     },
     {
-      name: "Financeiro",
-      href: createPageUrl("Financial"),
-      icon: DollarSign,
-      current: currentPageName === "Financial",
-      tooltip: "Controle financeiro completo da empresa"
-    },
-    {
       name: "Admin Dados",
       href: createPageUrl("DataAdmin"),
       icon: Database,
@@ -124,11 +114,30 @@ export default function Layout({ children, currentPageName }) {
       }
     }
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      async function refreshUser() {
+        try {
+          const user = await User.me();
+          setCurrentUser(user);
+        } catch (e) {
+          console.error("Erro ao recarregar usuário:", e);
+        }
+      }
+      refreshUser();
+    }
   }, [isSettingsOpen]);
 
   const handleLogout = async () => {
     await User.logout();
     window.location.reload();
+  };
+
+  const handleOpenSettings = () => {
+    console.log("Abrindo configurações...");
+    setIsSettingsOpen(true);
   };
 
   return (
@@ -157,28 +166,29 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </SidebarHeader>
 
-            <SidebarContent className="p-4">
+            <SidebarContent className="px-3 py-4">
               <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <SidebarGroupLabel className="text-gray-500 text-xs uppercase tracking-wider mb-2">
                   Menu Principal
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
-                  <SidebarMenu className="space-y-2">
+                  <SidebarMenu className="space-y-1">
                     {navigation.map((item) => (
                       <SidebarMenuItem key={item.name}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <SidebarMenuButton
                               asChild
-                              className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-lg ${
-                                item.current
-                                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                                  : 'text-gray-600'
+                              isActive={item.current}
+                              className={`transition-all duration-200 ${
+                                item.current 
+                                  ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium' 
+                                  : 'text-gray-700 hover:bg-gray-100'
                               }`}
                             >
-                              <Link to={item.href} className="flex items-center gap-3 px-3 py-2.5">
-                                <item.icon className="w-5 h-5" />
-                                <span className="font-medium">{item.name}</span>
+                              <Link to={item.href} className="flex items-center gap-3 px-3 py-2 rounded-lg">
+                                <item.icon className={`w-5 h-5 ${item.current ? 'text-blue-600' : 'text-gray-500'}`} />
+                                <span className="text-sm">{item.name}</span>
                               </Link>
                             </SidebarMenuButton>
                           </TooltipTrigger>
@@ -191,93 +201,41 @@ export default function Layout({ children, currentPageName }) {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
-
-              <SidebarGroup className="mt-8">
-                <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Status Rápido
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <div className="space-y-4">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200 cursor-pointer">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-green-700">Processos Ativos</span>
-                            <span className="font-bold text-green-800">12</span>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>Processos atualmente em execução</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200 cursor-pointer">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-amber-700">Pendentes</span>
-                            <span className="font-bold text-amber-800">5</span>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>Processos aguardando ação</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="bg-gradient-to-r from-red-50 to-rose-50 p-3 rounded-lg border border-red-200 cursor-pointer">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-red-700">Atrasados</span>
-                            <span className="font-bold text-red-800">2</span>
-                          </div>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>Processos que passaram do prazo</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </SidebarGroupContent>
-              </SidebarGroup>
             </SidebarContent>
 
             <SidebarFooter className="border-t border-gray-100 p-4">
               {currentUser ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-start text-left h-auto p-2 hover:bg-gray-100">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={currentUser.profile_picture_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name || 'Usuário')}&background=random`}
-                              alt="User"
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 text-sm truncate">{currentUser.full_name}</p>
-                              <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
-                            </div>
-                          </div>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>Clique para ver opções da conta</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <div className="w-full p-2 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={currentUser.profile_picture_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.full_name || 'Usuário')}&background=random`}
+                          alt="User"
+                          className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">{currentUser.full_name}</p>
+                          <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
+                        </div>
+                      </div>
+                    </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56 mb-2 bg-white border-gray-200" side="top" align="start">
                     <DropdownMenuLabel className="text-gray-900">Minha Conta</DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-gray-200" />
-                    <DropdownMenuItem onClick={() => setIsSettingsOpen(true)} className="text-gray-700 hover:bg-gray-100">
+                    <DropdownMenuItem 
+                      onClick={handleOpenSettings} 
+                      className="text-gray-700 hover:bg-gray-100 cursor-pointer"
+                    >
                       <Settings className="w-4 h-4 mr-2" />
                       Configurações
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-gray-200" />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 hover:bg-red-50">
+                    <DropdownMenuItem 
+                      onClick={handleLogout} 
+                      className="text-red-600 focus:text-red-600 hover:bg-red-50 cursor-pointer"
+                    >
                       <LogOut className="w-4 h-4 mr-2" />
                       Sair
                     </DropdownMenuItem>
@@ -329,26 +287,24 @@ export default function Layout({ children, currentPageName }) {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Notificações do sistema</p>
+                      <p>Notificações e alertas</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto bg-gray-50">
+            <div className="flex-1 overflow-auto">
               {children}
             </div>
           </main>
-          {isSettingsOpen && (
-            <SettingsModal
-              isOpen={isSettingsOpen}
-              onClose={() => setIsSettingsOpen(false)}
-            />
-          )}
         </div>
+
+        <SettingsModal 
+          isOpen={isSettingsOpen} 
+          onClose={() => setIsSettingsOpen(false)} 
+        />
       </SidebarProvider>
     </TooltipProvider>
   );
 }
-

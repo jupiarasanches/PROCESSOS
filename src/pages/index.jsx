@@ -8,8 +8,6 @@ import Technicians from "./Technicians";
 
 import DataAdmin from "./DataAdmin";
 
-import Financial from "./Financial";
-
 import Agenda from "./Agenda";
 
 import Welcome from "./Welcome";
@@ -27,8 +25,6 @@ const PAGES = {
     Technicians: Technicians,
     
     DataAdmin: DataAdmin,
-    
-    Financial: Financial,
     
     Agenda: Agenda,
     
@@ -70,8 +66,6 @@ function PagesContent() {
                 <Route path="/Technicians" element={<Technicians />} />
                 
                 <Route path="/DataAdmin" element={<DataAdmin />} />
-                
-                <Route path="/Financial" element={<Financial />} />
                 
                 <Route path="/Agenda" element={<Agenda />} />
                 

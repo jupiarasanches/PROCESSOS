@@ -382,13 +382,12 @@ export default function AppointmentModal({
                   <MessageCircle className="w-5 h-5 text-green-600" />
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Ativar notificações por WhatsApp</Label>
-                    <p className="text-xs text-gray-500">Receba lembretes por WhatsApp (em breve)</p>
+                    <p className="text-xs text-gray-500">Receba lembretes por WhatsApp</p>
                   </div>
                 </div>
                 <Switch
                   checked={formData.notification_whatsapp_enabled}
                   onCheckedChange={(checked) => handleInputChange('notification_whatsapp_enabled', checked)}
-                  disabled={true}
                 />
               </div>
 
