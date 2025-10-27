@@ -12,7 +12,7 @@ import Agenda from "./Agenda";
 
 import Welcome from "./Welcome";
 
-import Research from "./Research";
+import Instances from "./Instances";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -30,7 +30,7 @@ const PAGES = {
     
     Welcome: Welcome,
     
-    Research: Research,
+    Instances: Instances,
     
 }
 
@@ -71,7 +71,7 @@ function PagesContent() {
                 
                 <Route path="/Welcome" element={<Welcome />} />
                 
-                <Route path="/Research" element={<Research />} />
+                <Route path="/Instances" element={<Instances />} />
                 
             </Routes>
         </Layout>

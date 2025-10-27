@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -43,15 +42,11 @@ export default function ProcessModal({
     municipality: '',
     due_date: null,
     description: '',
-    deadline_notification_email: false,
-    deadline_notification_email_address: '',
-    deadline_notification_whatsapp: false,
-    deadline_notification_days_before: 3,
     recurring_notification_enabled: false,
     recurring_notification_frequency: 'daily',
     recurring_notification_email: '',
     recurring_notification_whatsapp: false,
-    recurring_notification_time: '09:00' // Nova propriedade para horário
+    recurring_notification_time: '09:00'
   });
 
   const [technicians, setTechnicians] = useState([]);
@@ -85,10 +80,6 @@ export default function ProcessModal({
         municipality: '',
         due_date: null,
         description: '',
-        deadline_notification_email: false,
-        deadline_notification_email_address: '',
-        deadline_notification_whatsapp: false,
-        deadline_notification_days_before: 3,
         recurring_notification_enabled: false,
         recurring_notification_frequency: 'daily',
         recurring_notification_email: '',
@@ -231,10 +222,6 @@ export default function ProcessModal({
       municipality: '',
       due_date: null,
       description: '',
-      deadline_notification_email: false,
-      deadline_notification_email_address: '',
-      deadline_notification_whatsapp: false,
-      deadline_notification_days_before: 3,
       recurring_notification_enabled: false,
       recurring_notification_frequency: 'daily',
       recurring_notification_email: '',
@@ -424,89 +411,7 @@ export default function ProcessModal({
             />
           </div>
 
-          {/* Configurações de Notificações de Prazo */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h4 className="text-sm font-semibold text-gray-900 mb-4">Notificações de Prazo</h4>
-            <p className="text-xs text-gray-500 mb-4">Configure para ser notificado quando o prazo do processo estiver próximo do vencimento</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* E-mail */}
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">E-mail</Label>
-                    <p className="text-xs text-gray-500">Notificar por e-mail</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={formData.deadline_notification_email}
-                  onCheckedChange={(checked) => handleInputChange('deadline_notification_email', checked)}
-                />
-              </div>
-
-              {/* WhatsApp */}
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
-                <div className="flex items-center gap-3">
-                  <MessageCircle className="w-5 h-5 text-green-600" />
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">WhatsApp</Label>
-                    <p className="text-xs text-gray-500">Notificar por WhatsApp</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={formData.deadline_notification_whatsapp}
-                  onCheckedChange={(checked) => handleInputChange('deadline_notification_whatsapp', checked)}
-                />
-              </div>
-            </div>
-
-            {/* E-mail personalizado para notificações de prazo */}
-            {formData.deadline_notification_email && (
-              <div className="mt-4">
-                <Label htmlFor="deadline_notification_email_address" className="text-sm font-medium text-gray-700">
-                  E-mail para receber notificações de prazo (opcional)
-                </Label>
-                <Input
-                  id="deadline_notification_email_address"
-                  type="email"
-                  value={formData.deadline_notification_email_address}
-                  onChange={(e) => handleInputChange('deadline_notification_email_address', e.target.value)}
-                  className="mt-1"
-                  placeholder="Se vazio, usará seu e-mail de login"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Deixe em branco para usar seu e-mail de login no sistema
-                </p>
-              </div>
-            )}
-
-            {/* Dias antes */}
-            {(formData.deadline_notification_email || formData.deadline_notification_whatsapp) && (
-              <div className="mt-4">
-                <Label htmlFor="notification_days" className="text-sm font-medium text-gray-700">
-                  Notificar quantos dias antes do prazo?
-                </Label>
-                <Select
-                  value={formData.deadline_notification_days_before.toString()}
-                  onValueChange={(value) => handleInputChange('deadline_notification_days_before', parseInt(value))}
-                >
-                  <SelectTrigger className="mt-1 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 dia antes</SelectItem>
-                    <SelectItem value="2">2 dias antes</SelectItem>
-                    <SelectItem value="3">3 dias antes</SelectItem>
-                    <SelectItem value="5">5 dias antes</SelectItem>
-                    <SelectItem value="7">1 semana antes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-
-          {/* NOVA SEÇÃO: Configurações de Notificações Recorrentes */}
+          {/* SEÇÃO DE NOTIFICAÇÕES RECORRENTES */}
           <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
             <div className="flex items-center gap-3 mb-4">
               <Clock className="w-6 h-6 text-blue-600" />

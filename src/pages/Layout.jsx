@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -13,7 +14,10 @@ import {
   Search,
   LogOut,
   Database,
-  Calendar
+  Calendar,
+  ChevronDown,
+  FolderOpen,
+  Plus
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,11 +42,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarHeader,
   SidebarFooter,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import SettingsModal from "./components/settings/SettingsModal";
@@ -51,6 +63,9 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProcessesOpen, setIsProcessesOpen] = useState(
+    currentPageName === "Processes" || currentPageName === "Instances"
+  );
 
   const navigation = [
     {
@@ -59,13 +74,6 @@ export default function Layout({ children, currentPageName }) {
       icon: LayoutDashboard,
       current: currentPageName === "Dashboard",
       tooltip: "Visão geral dos dados e métricas"
-    },
-    {
-      name: "Processos",
-      href: createPageUrl("Processes"),
-      icon: FileText,
-      current: currentPageName === "Processes",
-      tooltip: "Gerenciar processos e criar novas instâncias"
     },
     {
       name: "Agenda",
@@ -82,25 +90,11 @@ export default function Layout({ children, currentPageName }) {
       tooltip: "Gerenciar equipe e técnicos responsáveis"
     },
     {
-      name: "Instâncias",
-      href: createPageUrl("Instances"),
-      icon: Play,
-      current: currentPageName === "Instances",
-      tooltip: "Visualizar todas as instâncias de processos"
-    },
-    {
       name: "Admin Dados",
       href: createPageUrl("DataAdmin"),
       icon: Database,
       current: currentPageName === "DataAdmin",
       tooltip: "Administrar dados do sistema"
-    },
-    {
-      name: "Pesquisa",
-      href: createPageUrl("Research"),
-      icon: Search,
-      current: currentPageName === "Research",
-      tooltip: "Análise de mercado e funcionalidades avançadas"
     },
   ];
 
@@ -130,13 +124,16 @@ export default function Layout({ children, currentPageName }) {
     }
   }, [isSettingsOpen]);
 
+  useEffect(() => {
+    setIsProcessesOpen(currentPageName === "Processes" || currentPageName === "Instances");
+  }, [currentPageName]);
+
   const handleLogout = async () => {
     await User.logout();
     window.location.reload();
   };
 
   const handleOpenSettings = () => {
-    console.log("Abrindo configurações...");
     setIsSettingsOpen(true);
   };
 
@@ -198,6 +195,84 @@ export default function Layout({ children, currentPageName }) {
                         </Tooltip>
                       </SidebarMenuItem>
                     ))}
+
+                    {/* Item de Processos com submenu expansível */}
+                    <Collapsible
+                      open={isProcessesOpen}
+                      onOpenChange={setIsProcessesOpen}
+                      className="group/collapsible"
+                    >
+                      <SidebarMenuItem>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuButton
+                                className={`transition-all duration-200 ${
+                                  (currentPageName === "Processes" || currentPageName === "Instances")
+                                    ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium' 
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                }`}
+                              >
+                                <FileText className={`w-5 h-5 ${
+                                  (currentPageName === "Processes" || currentPageName === "Instances")
+                                    ? 'text-blue-600' 
+                                    : 'text-gray-500'
+                                }`} />
+                                <span className="text-sm">Processos</span>
+                                <ChevronDown className={`ml-auto h-4 w-4 transition-transform duration-200 ${
+                                  isProcessesOpen ? 'rotate-180' : ''
+                                }`} />
+                              </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>Gerenciar processos e instâncias</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            <SidebarMenuSubItem>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={currentPageName === "Processes"}
+                                  >
+                                    <Link to={createPageUrl("Processes")} className="flex items-center gap-2">
+                                      <Plus className="w-4 h-4" />
+                                      <span>Catálogo de Processos</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                  <p>Ver catálogo e criar novos processos</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </SidebarMenuSubItem>
+
+                            <SidebarMenuSubItem>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={currentPageName === "Instances"}
+                                  >
+                                    <Link to={createPageUrl("Instances")} className="flex items-center gap-2">
+                                      <FolderOpen className="w-4 h-4" />
+                                      <span>Processos Criados</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                  <p>Ver todas as instâncias de processos</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </SidebarMenuSubItem>
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -308,3 +383,4 @@ export default function Layout({ children, currentPageName }) {
     </TooltipProvider>
   );
 }
+
