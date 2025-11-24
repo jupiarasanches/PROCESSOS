@@ -13,6 +13,8 @@ export const TwilioConfig = base44.entities.TwilioConfig;
 
 export const WhatsAppNumber = base44.entities.WhatsAppNumber;
 
+export const AuditLog = base44.entities.AuditLog;
+
 
 
 // auth sdk:

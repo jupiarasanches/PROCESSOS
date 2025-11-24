@@ -17,7 +17,9 @@ import {
   Calendar,
   ChevronDown,
   FolderOpen,
-  Plus
+  Plus,
+  BarChart3, // Added BarChart3 icon
+  Shield // Added Shield icon
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -76,6 +78,13 @@ export default function Layout({ children, currentPageName }) {
       tooltip: "Visão geral dos dados e métricas"
     },
     {
+      name: "Relatórios",
+      href: createPageUrl("Reports"),
+      icon: BarChart3,
+      current: currentPageName === "Reports",
+      tooltip: "Relatórios detalhados e analytics"
+    },
+    {
       name: "Agenda",
       href: createPageUrl("Agenda"),
       icon: Calendar,
@@ -88,6 +97,20 @@ export default function Layout({ children, currentPageName }) {
       icon: Users,
       current: currentPageName === "Technicians",
       tooltip: "Gerenciar equipe e técnicos responsáveis"
+    },
+    {
+      name: "Modelos",
+      href: createPageUrl("ProcessTemplates"),
+      icon: FileText,
+      current: currentPageName === "ProcessTemplates",
+      tooltip: "Gerenciar modelos de processos"
+    },
+    {
+      name: "Auditoria",
+      href: createPageUrl("AuditLog"),
+      icon: Shield,
+      current: currentPageName === "AuditLog",
+      tooltip: "Log de auditoria e rastreamento de alterações"
     },
     {
       name: "Admin Dados",

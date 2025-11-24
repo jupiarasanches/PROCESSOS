@@ -21,8 +21,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Loader2, Save, X } from "lucide-react";
+import { CalendarIcon, Loader2, Save, X, Upload, FileText, Trash2 } from "lucide-react";
 import { User } from "@/api/entities";
+import { UploadFile } from "@/api/integrations";
+import { toast } from "sonner";
 
 export default function ProcessInstanceModal({ 
   instance, 
@@ -45,6 +47,8 @@ export default function ProcessInstanceModal({
   const [technicians, setTechnicians] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (isOpen && instance) {
@@ -59,6 +63,7 @@ export default function ProcessInstanceModal({
         due_date: instance.due_date ? new Date(instance.due_date) : null,
         notes: instance.notes || ''
       });
+      setDocuments(instance.documents || []);
       loadTechnicians();
     }
   }, [isOpen, instance]);
@@ -78,6 +83,76 @@ export default function ProcessInstanceModal({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleFileUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const allowedTypes = [
+          'application/pdf',
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'text/plain',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // DOCX
+        ];
+        
+        if (!allowedTypes.includes(file.type)) {
+          toast.error(`Arquivo ${file.name} não é suportado. Use PDF, JPEG, PNG, TXT, XLSX ou DOCX.`);
+          return null;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`Arquivo ${file.name} é muito grande. Máximo 10MB.`);
+          return null;
+        }
+
+        try {
+          const { file_url } = await UploadFile({ file });
+          return {
+            name: file.name,
+            url: file_url,
+            type: file.type,
+            size: file.size,
+            uploaded_at: new Date().toISOString()
+          };
+        } catch (error) {
+          toast.error(`Erro ao fazer upload de ${file.name}.`);
+          return null;
+        }
+      });
+
+      const uploadedFiles = await Promise.all(uploadPromises);
+      const validFiles = uploadedFiles.filter(file => file !== null);
+
+      setDocuments(prev => [...prev, ...validFiles]);
+      if (validFiles.length > 0) {
+        toast.success(`${validFiles.length} arquivo(s) enviado(s) com sucesso!`);
+      }
+    } catch (error) {
+      toast.error("Erro ao fazer upload dos arquivos.");
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const removeDocument = (index) => {
+    setDocuments(prev => prev.filter((_, i) => i !== index));
+    toast.info("Documento removido.");
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const validateForm = () => {
@@ -106,7 +181,8 @@ export default function ProcessInstanceModal({
       await onSubmit({
         ...formData,
         area_hectares: formData.area_hectares ? Number(formData.area_hectares) : null,
-        due_date: formData.due_date ? formData.due_date.toISOString() : null
+        due_date: formData.due_date ? formData.due_date.toISOString() : null,
+        documents: documents
       });
       onClose();
     } catch (error) {
@@ -302,12 +378,77 @@ export default function ProcessInstanceModal({
             />
           </div>
 
+          {/* Upload de Documentos */}
+          <div>
+            <Label className="text-sm font-semibold text-slate-700">
+              Documentos (PDF, JPEG, PNG, TXT, XLSX, DOCX)
+            </Label>
+            <div className="mt-2">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpeg,.jpg,.png,.txt,.xlsx,.docx"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="file-upload-edit"
+                  disabled={uploading}
+                />
+                <label
+                  htmlFor="file-upload-edit"
+                  className={`cursor-pointer flex flex-col items-center space-y-2 ${uploading ? 'opacity-50' : ''}`}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  ) : (
+                    <Upload className="w-8 h-8 text-gray-400" />
+                  )}
+                  <div className="text-sm text-gray-600">
+                    {uploading ? 'Enviando arquivos...' : 'Clique para adicionar mais arquivos'}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    PDF, JPEG, PNG, TXT, XLSX, DOCX (máximo 10MB cada)
+                  </div>
+                </label>
+              </div>
+
+              {/* Lista de documentos */}
+              {documents.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">
+                    Arquivos Anexados ({documents.length})
+                  </Label>
+                  {documents.map((doc, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 truncate max-w-[200px] md:max-w-none">{doc.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(doc.size)}</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeDocument(index)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex justify-end gap-3 pt-6 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={handleClose}
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploading}
               className="flex items-center gap-2"
             >
               <X className="w-4 h-4" />
@@ -315,7 +456,7 @@ export default function ProcessInstanceModal({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploading}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
             >
               {isSubmitting ? (

@@ -14,6 +14,12 @@ import Welcome from "./Welcome";
 
 import Instances from "./Instances";
 
+import Reports from "./Reports";
+
+import AuditLog from "./AuditLog";
+
+import ProcessTemplates from "./ProcessTemplates";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -31,6 +37,12 @@ const PAGES = {
     Welcome: Welcome,
     
     Instances: Instances,
+    
+    Reports: Reports,
+    
+    AuditLog: AuditLog,
+    
+    ProcessTemplates: ProcessTemplates,
     
 }
 
@@ -72,6 +84,12 @@ function PagesContent() {
                 <Route path="/Welcome" element={<Welcome />} />
                 
                 <Route path="/Instances" element={<Instances />} />
+                
+                <Route path="/Reports" element={<Reports />} />
+                
+                <Route path="/AuditLog" element={<AuditLog />} />
+                
+                <Route path="/ProcessTemplates" element={<ProcessTemplates />} />
                 
             </Routes>
         </Layout>

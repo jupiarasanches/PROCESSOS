@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { User } from "@/api/entities";
 import { ProcessInstance } from "@/api/entities";
@@ -15,6 +16,7 @@ import {
 // Hooks personalizados
 import { useProcesses } from "../components/hooks/useProcesses";
 import { useInstances } from "../components/hooks/useInstances";
+import { useAuditLog } from "../components/hooks/useAuditLog";
 
 export default function ProcessesPage() {
   const [selectedProcess, setSelectedProcess] = useState(null);
@@ -26,6 +28,7 @@ export default function ProcessesPage() {
     instances,
     addInstance 
   } = useInstances(false); // Não carrega automaticamente, só quando necessário
+  const { logCreation } = useAuditLog();
 
   const handleSelectProcess = (processId) => {
     const process = processes.find(p => p.id === processId);
@@ -73,6 +76,14 @@ export default function ProcessesPage() {
 
       const newInstance = await ProcessInstance.create(instanceData);
       addInstance(newInstance);
+
+      // Log de auditoria
+      await logCreation(
+        'ProcessInstance',
+        newInstance.id,
+        instanceData,
+        `Nova instância de processo criada: "${formData.title}" por ${currentUser.full_name || currentUser.email}`
+      );
 
       toast.success("Processo criado com sucesso!", {
         description: `O processo "${formData.title}" foi criado e está aguardando análise.`,

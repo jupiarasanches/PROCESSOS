@@ -169,9 +169,8 @@ export default function NewProcessModal({ isOpen, onClose, onSubmit }) {
                   <SelectItem value="ambiental">Ambiental</SelectItem>
                   <SelectItem value="agronegocio">Agronegócio</SelectItem>
                   <SelectItem value="operacional">Operacional</SelectItem>
-                  <SelectItem value="juridico">Jurídico</SelectItem>
-                  <SelectItem value="qualidade">Qualidade</SelectItem>
-                  <SelectItem value="outros">Outros</SelectItem>
+                  <SelectItem value="florestal">Florestal</SelectItem>
+                  <SelectItem value="georreferenciamento">Georreferenciamento</SelectItem>
                 </SelectContent>
               </Select>
             </div>

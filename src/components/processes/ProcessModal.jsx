@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -119,9 +120,18 @@ export default function ProcessModal({
     setUploading(true);
     try {
       const uploadPromises = files.map(async (file) => {
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        const allowedTypes = [
+          'application/pdf',
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'text/plain',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        
         if (!allowedTypes.includes(file.type)) {
-          toast.error(`Arquivo ${file.name} não é suportado. Use PDF, JPEG ou PNG.`);
+          toast.error(`Arquivo ${file.name} não é suportado. Use PDF, JPEG, PNG, TXT, XLSX ou DOCX.`);
           return null;
         }
 
@@ -550,14 +560,14 @@ export default function ProcessModal({
           {/* Upload de Documentos */}
           <div>
             <Label className="text-sm font-semibold text-slate-700">
-              Documentos (PDF, JPEG, PNG)
+              Documentos (PDF, JPEG, PNG, TXT, XLSX, DOCX)
             </Label>
             <div className="mt-2">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.jpeg,.jpg,.png"
+                  accept=".pdf,.jpeg,.jpg,.png,.txt,.xlsx,.docx"
                   onChange={handleFileUpload}
                   className="hidden"
                   id="file-upload"
@@ -576,7 +586,7 @@ export default function ProcessModal({
                     {uploading ? 'Enviando arquivos...' : 'Clique para selecionar arquivos ou arraste aqui'}
                   </div>
                   <div className="text-xs text-gray-500">
-                    PDF, JPEG, PNG (máximo 10MB cada)
+                    PDF, JPEG, PNG, TXT, XLSX, DOCX (máximo 10MB cada)
                   </div>
                 </label>
               </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -40,9 +39,9 @@ export default function AppointmentModal({
     duration_hours: 1,
     priority: 'media',
     notification_email_enabled: true,
-    notification_email: '', // New field added
+    notification_email: '',
     notification_whatsapp_enabled: false,
-    notification_minutes_before: 20, // Padrão 20 minutos
+    notification_minutes_before: 0,
     location: '',
     client_company: '',
     notes: ''
@@ -64,9 +63,9 @@ export default function AppointmentModal({
           duration_hours: appointment.duration_hours || 1,
           priority: appointment.priority || 'media',
           notification_email_enabled: appointment.notification_email_enabled !== false,
-          notification_email: appointment.notification_email || '', // Set from appointment
+          notification_email: appointment.notification_email || '',
           notification_whatsapp_enabled: appointment.notification_whatsapp_enabled || false,
-          notification_minutes_before: appointment.notification_minutes_before || 20,
+          notification_minutes_before: appointment.notification_minutes_before || 0,
           location: appointment.location || '',
           client_company: appointment.client_company || '',
           notes: appointment.notes || ''
@@ -81,9 +80,9 @@ export default function AppointmentModal({
           duration_hours: 1,
           priority: 'media',
           notification_email_enabled: true,
-          notification_email: '', // Reset for new appointment
+          notification_email: '',
           notification_whatsapp_enabled: false,
-          notification_minutes_before: 20,
+          notification_minutes_before: 0,
           location: '',
           client_company: '',
           notes: ''
@@ -155,9 +154,9 @@ export default function AppointmentModal({
       duration_hours: 1,
       priority: 'media',
       notification_email_enabled: true,
-      notification_email: '', // Reset for close
+      notification_email: '',
       notification_whatsapp_enabled: false,
-      notification_minutes_before: 20,
+      notification_minutes_before: 0,
       location: '',
       client_company: '',
       notes: ''
@@ -405,14 +404,20 @@ export default function AppointmentModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="10">10 minutos</SelectItem>
-                      <SelectItem value="15">15 minutos</SelectItem>
-                      <SelectItem value="20">20 minutos</SelectItem>
-                      <SelectItem value="30">30 minutos</SelectItem>
-                      <SelectItem value="60">1 hora</SelectItem>
-                      <SelectItem value="120">2 horas</SelectItem>
+                      <SelectItem value="0">No horário exato</SelectItem>
+                      <SelectItem value="10">10 minutos antes</SelectItem>
+                      <SelectItem value="15">15 minutos antes</SelectItem>
+                      <SelectItem value="20">20 minutos antes</SelectItem>
+                      <SelectItem value="30">30 minutos antes</SelectItem>
+                      <SelectItem value="60">1 hora antes</SelectItem>
+                      <SelectItem value="120">2 horas antes</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.notification_minutes_before === 0 
+                      ? `Você será notificado exatamente às ${scheduledTime}` 
+                      : `Você será notificado ${formData.notification_minutes_before} minutos antes do compromisso`}
+                  </p>
                 </div>
               )}
             </div>

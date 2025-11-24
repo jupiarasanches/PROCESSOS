@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Appointment, Process, ProcessInstance, Notification } from "@/api/entities";
-import { SendEmail } from "@/api/integrations";
-import { Calendar, CalendarDays, Clock, Plus, Bell, Filter, CheckCircle, AlertCircle, Trash2 } from "lucide-react"; // Added Trash2
+import { base44 } from "@/api/base44Client";
+import { Calendar, CalendarDays, Clock, Plus, Bell, Filter, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isFuture } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { User } from "@/api/entities";
 import { toast } from "sonner";
 import {
   Tooltip,
@@ -28,7 +26,7 @@ export default function AgendaPage() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false); // Renamed from isAppointmentModal
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [viewMode, setViewMode] = useState("calendar");
@@ -36,44 +34,38 @@ export default function AgendaPage() {
 
   const checkNotifications = useCallback(async () => {
     try {
-      const user = currentUser; // Use currentUser state
-      if (!user) return; // Ensure user is loaded
+      const user = currentUser;
+      if (!user) return;
 
       const now = new Date();
       
-      // Buscar compromissos que precisam de notificação e pertencem ao usuário logado
       const upcomingAppointments = appointments.filter(apt => {
         if (!apt.notification_email_enabled || apt.notification_sent) return false;
         
         const scheduledTime = new Date(apt.scheduled_date);
         const notificationTime = new Date(scheduledTime.getTime() - (apt.notification_minutes_before * 60000));
         
-        // Ensure notification is only for the current user's assigned appointments
         return now >= notificationTime && now < scheduledTime && apt.assigned_to === user.email;
       });
 
-      // Criar notificações para compromissos
       for (const appointment of upcomingAppointments) {
         const scheduledTime = format(new Date(appointment.scheduled_date), "HH:mm 'do dia' dd/MM/yyyy", { locale: ptBR });
         
-        // Criar notificação no sistema (será específica para o usuário no sistema de notificação)
         const notification = {
           title: "Compromisso Agendado",
           message: `${appointment.title} está agendado para ${scheduledTime}`,
           type: "compromisso",
-          user_email: user.email, // Specific to the user
+          user_email: user.email,
           related_id: appointment.id,
           scheduled_for: new Date().toISOString(),
           priority: appointment.priority,
           action_url: "/agenda"
         };
 
-        await Notification.create(notification);
+        await base44.entities.Notification.create(notification);
         
-        // Enviar e-mail de notificação se habilitado
         if (appointment.notification_email_enabled) {
           try {
-            // Usar e-mail personalizado se fornecido, senão usar e-mail de login
             const targetEmail = appointment.notification_email || user.email;
             
             const processName = appointment.process_id 
@@ -107,47 +99,44 @@ export default function AgendaPage() {
               </p>
             `;
 
-            await SendEmail({
+            await base44.integrations.Core.SendEmail({
               to: targetEmail,
-              subject: `🔔 Lembrete: ${appointment.title} em ${appointment.notification_minutes_before} minutos`,
+              subject: `🔔 Lembrete: ${appointment.title}${appointment.notification_minutes_before > 0 ? ` em ${appointment.notification_minutes_before} minutos` : ''}`,
               body: emailBody,
               from_name: "ProcessFlow - Sistema de Agendamento"
             });
 
             console.log(`E-mail de notificação enviado para: ${targetEmail}`);
+            toast.success(`E-mail enviado para ${targetEmail}`);
             
           } catch (emailError) {
             console.error("Erro ao enviar e-mail de notificação:", emailError);
-            // Não quebra o fluxo se o e-mail falhar
+            toast.error("Erro ao enviar e-mail de notificação");
           }
         }
         
-        // Marcar como notificado
-        await Appointment.update(appointment.id, { notification_sent: true });
+        await base44.entities.Appointment.update(appointment.id, { notification_sent: true });
       }
 
-      // Recarregar notificações (o outline pede para carregar todas as notificações, mas o NotificationCenter é pessoal)
-      // Para manter a coerência com o carregamento global de notificações, recarregaremos todas aqui também.
-      // Se a intenção for que o NotificationCenter seja apenas para o usuário atual, esta linha precisaria ser 'Notification.filter({ user_email: user.email }, '-created_date');'
-      const updatedNotifications = await Notification.list('-created_date'); // TODAS as notificações - SEM FILTRO para ser consistente com loadData
+      const updatedNotifications = await base44.entities.Notification.list('-created_date');
       setNotifications(updatedNotifications || []);
       
     } catch (error) {
       console.error("Erro ao verificar notificações:", error);
+      toast.error("Erro ao verificar notificações");
     }
-  }, [appointments, processes, currentUser]); // Added currentUser to dependencies
+  }, [appointments, processes, currentUser]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const user = await User.me();
+      const user = await base44.auth.me();
       setCurrentUser(user);
 
-      // CARREGAR DADOS GLOBAIS - TODOS OS COMPROMISSOS, PROCESSOS E NOTIFICAÇÕES
       const [appointmentData, processData, notificationData] = await Promise.all([
-        Appointment.list('-scheduled_date'),  // TODOS os compromissos - SEM FILTRO
-        Process.list('-created_date'),        // TODOS os processos - SEM FILTRO
-        Notification.list('-created_date')    // TODAS as notificações - SEM FILTRO
+        base44.entities.Appointment.list('-scheduled_date'),
+        base44.entities.Process.list('-created_date'),
+        base44.entities.Notification.list('-created_date')
       ]);
       
       setAppointments(appointmentData || []);
@@ -171,32 +160,32 @@ export default function AgendaPage() {
   }, [loadData]);
 
   useEffect(() => {
-    // Only run checkNotifications if appointments are available and user is loaded
     if (appointments.length > 0 && currentUser) {
       checkNotifications();
       
-      // Verificar notificações a cada minuto
       const interval = setInterval(checkNotifications, 60000);
       return () => clearInterval(interval);
     }
-  }, [appointments, checkNotifications, currentUser]); // Added currentUser to dependencies
+  }, [appointments, checkNotifications, currentUser]);
 
   const handleCreateAppointment = async (appointmentData) => {
     try {
-      const user = await User.me();
-      const newAppointment = await Appointment.create({
+      const user = await base44.auth.me();
+      const newAppointment = await base44.entities.Appointment.create({
         ...appointmentData,
-        assigned_to: user.email // New appointments are assigned to the current user
+        assigned_to: user.email
       });
 
       setAppointments(prev => [newAppointment, ...prev]);
       toast.success("Compromisso agendado com sucesso!", {
         description: appointmentData.notification_email_enabled 
-          ? `Você receberá um e-mail ${appointmentData.notification_minutes_before} minutos antes do compromisso.`
+          ? appointmentData.notification_minutes_before === 0
+            ? "Você receberá um e-mail no horário exato do compromisso."
+            : `Você receberá um e-mail ${appointmentData.notification_minutes_before} minutos antes do compromisso.`
           : ""
       });
       
-      setIsAppointmentModalOpen(false); // Changed from setIsAppointmentModal
+      setIsAppointmentModalOpen(false);
       setSelectedAppointment(null);
     } catch (error) {
       console.error('Erro ao criar compromisso:', error);
@@ -207,7 +196,7 @@ export default function AgendaPage() {
 
   const handleUpdateAppointment = async (appointmentData) => {
     try {
-      await Appointment.update(selectedAppointment.id, appointmentData);
+      await base44.entities.Appointment.update(selectedAppointment.id, appointmentData);
       
       setAppointments(prev => 
         prev.map(apt => 
@@ -216,7 +205,7 @@ export default function AgendaPage() {
       );
       
       toast.success("Compromisso atualizado com sucesso!");
-      setIsAppointmentModalOpen(false); // Changed from setIsAppointmentModal
+      setIsAppointmentModalOpen(false);
       setSelectedAppointment(null);
     } catch (error) {
       console.error('Erro ao atualizar compromisso:', error);
@@ -227,7 +216,7 @@ export default function AgendaPage() {
 
   const handleDeleteAppointment = async (appointmentId) => {
     try {
-      await Appointment.delete(appointmentId);
+      await base44.entities.Appointment.delete(appointmentId);
       
       setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
       
@@ -240,12 +229,12 @@ export default function AgendaPage() {
 
   const handleEditAppointment = (appointment) => {
     setSelectedAppointment(appointment);
-    setIsAppointmentModalOpen(true); // Changed from setIsAppointmentModal
+    setIsAppointmentModalOpen(true);
   };
 
   const handleStatusChange = async (appointmentId, newStatus) => {
     try {
-      await Appointment.update(appointmentId, { status: newStatus });
+      await base44.entities.Appointment.update(appointmentId, { status: newStatus });
       
       setAppointments(prev =>
         prev.map(apt =>
@@ -260,7 +249,6 @@ export default function AgendaPage() {
     }
   };
 
-  // Filtrar compromissos
   const filteredAppointments = appointments.filter(apt => {
     if (filterStatus === "all") return true;
     return apt.status === filterStatus;
@@ -274,7 +262,6 @@ export default function AgendaPage() {
     isFuture(new Date(apt.scheduled_date)) && !isToday(new Date(apt.scheduled_date))
   );
 
-  // If notifications state is global, this will count all unread system notifications
   const unreadNotifications = notifications.filter(n => !n.is_read).length;
 
   if (loading) {
@@ -310,11 +297,10 @@ export default function AgendaPage() {
               <TooltipTrigger asChild>
                 <div>
                   <NotificationCenter 
-                    notifications={notifications} // These are now global notifications
-                    unreadCount={unreadNotifications} // Counts all unread system notifications
+                    notifications={notifications}
+                    unreadCount={unreadNotifications}
                     onNotificationRead={(id) => {
-                      // Mark as read globally
-                      Notification.update(id, { is_read: true });
+                      base44.entities.Notification.update(id, { is_read: true });
                       setNotifications(prev => 
                         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
                       );
@@ -332,7 +318,7 @@ export default function AgendaPage() {
                 <Button 
                   onClick={() => {
                     setSelectedAppointment(null);
-                    setIsAppointmentModalOpen(true); // Changed from setIsAppointmentModal
+                    setIsAppointmentModalOpen(true);
                   }}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
@@ -493,7 +479,7 @@ export default function AgendaPage() {
                     onDateClick={(date) => {
                       setSelectedDate(date);
                       setSelectedAppointment(null);
-                      setIsAppointmentModalOpen(true); // Changed from setIsAppointmentModal
+                      setIsAppointmentModalOpen(true);
                     }}
                   />
                 </div>
@@ -616,9 +602,9 @@ export default function AgendaPage() {
         <AppointmentModal
           appointment={selectedAppointment}
           processes={processes}
-          isOpen={isAppointmentModalOpen} // Changed from isAppointmentModal
+          isOpen={isAppointmentModalOpen}
           onClose={() => {
-            setIsAppointmentModalOpen(false); // Changed from setIsAppointmentModal
+            setIsAppointmentModalOpen(false);
             setSelectedAppointment(null);
           }}
           onSubmit={selectedAppointment ? handleUpdateAppointment : handleCreateAppointment}
