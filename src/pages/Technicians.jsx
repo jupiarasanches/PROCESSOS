@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from "react";
-import { User } from "@/api/entities";
+import { useState, useEffect, useMemo } from "react";
+import { UsersService, AuthService } from "@/services";
 import TechnicianCard from "../components/technicians/TechnicianCard";
 import TechnicianForm from "../components/technicians/TechnicianForm";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,32 +22,41 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Search, Users, Loader2, UserPlus } from "lucide-react";
+import InviteTechnicianModal from "../components/technicians/InviteTechnicianModal";
 import { toast } from "sonner";
 
 export default function TechniciansPage() {
   const [technicians, setTechnicians] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedTechnician, setSelectedTechnician] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, technician: null });
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     loadTechnicians();
+    loadCurrentUser();
   }, []);
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await AuthService.getCurrentUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error("Erro ao carregar usuário atual", error);
+    }
+  };
 
   const loadTechnicians = async () => {
     setLoading(true);
     try {
-      // CARREGAR TODOS OS USUÁRIOS - SEM FILTROS - DADOS GLOBAIS
-      // This ensures all users are loaded, making data visible for all by default.
-      const allUsers = await User.list('-created_date');
+      const allUsers = await UsersService.getAllUsers({ orderBy: '-created_date' });
       setTechnicians(allUsers || []);
-      
-      console.log('✅ TÉCNICOS - DADOS GLOBAIS CARREGADOS:', allUsers?.length || 0);
     } catch (error) {
-      console.error("❌ Erro ao carregar técnicos:", error);
       setTechnicians([]);
     } finally {
       setLoading(false);
@@ -57,11 +66,11 @@ export default function TechniciansPage() {
   const handleSaveTechnician = async (formData) => {
     try {
       if (isEditing && selectedTechnician) {
-        await User.update(selectedTechnician.id, formData);
+        await UsersService.updateUser(selectedTechnician.id, formData);
         toast.success("Técnico atualizado com sucesso!");
       } else {
-        toast.error("A criação de novos usuários não é permitida aqui.", {
-          description: "Por favor, convide um novo usuário pelo painel da aplicação."
+        toast.error("A criação de novos usuários não é permitida no formulário de edição.", {
+          description: "Use o botão 'Convidar Técnico' para enviar convites."
         });
         return;
       }
@@ -85,9 +94,46 @@ export default function TechniciansPage() {
     setDeleteDialog({ open: true, technician });
   };
 
+  const handleToggleAdmin = async (technician) => {
+    try {
+      const makeAdmin = technician.role !== 'admin';
+      await UsersService.setAdminRole(technician.id, makeAdmin);
+      toast.success(makeAdmin ? 'Técnico promovido a admin' : 'Admin rebaixado para técnico');
+      await loadTechnicians();
+    } catch (error) {
+      toast.error('Falha ao alterar privilégios');
+    }
+  };
+
+  const handleResendInvite = async (technician) => {
+    try {
+      await UsersService.resendInvitation(technician.email);
+      toast.success('Convite reenviado com sucesso');
+    } catch (error) {
+      toast.error(error?.message || 'Falha ao reenviar convite');
+    }
+  };
+
+  const handleGenerateLink = async (technician) => {
+    try {
+      const { link } = await UsersService.generateAccessLink(technician.email);
+      try { await navigator.clipboard.writeText(link); } catch (_) {
+        const t = document.createElement('textarea');
+        t.value = link;
+        document.body.appendChild(t);
+        t.select();
+        try { document.execCommand('copy'); } catch (__) {}
+        document.body.removeChild(t);
+      }
+      toast.success('Link de acesso gerado e copiado', { description: link });
+    } catch (error) {
+      toast.error(error?.message || 'Falha ao gerar link');
+    }
+  };
+
   const confirmDelete = async () => {
     try {
-      await User.delete(deleteDialog.technician.id);
+      await UsersService.deleteUser(deleteDialog.technician.id);
       toast.success("Técnico removido com sucesso!");
       await loadTechnicians();
     } catch (error) {
@@ -104,14 +150,23 @@ export default function TechniciansPage() {
     setIsEditing(false);
   };
 
-  const filteredTechnicians = technicians.filter(tech =>
-    tech.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tech.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tech.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tech.position?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim().toLowerCase()), 250);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
-  const stats = {
+  const filteredTechnicians = useMemo(() => {
+    const q = debouncedSearch;
+    if (!q) return technicians;
+    return technicians.filter(tech =>
+      tech.full_name?.toLowerCase().includes(q) ||
+      tech.email?.toLowerCase().includes(q) ||
+      tech.department?.toLowerCase().includes(q) ||
+      tech.position?.toLowerCase().includes(q)
+    );
+  }, [technicians, debouncedSearch]);
+
+  const stats = useMemo(() => ({
     total: technicians.length,
     byDepartment: technicians.reduce((acc, tech) => {
       const dept = tech.department || 'administrativo';
@@ -119,7 +174,7 @@ export default function TechniciansPage() {
       return acc;
     }, {}),
     admins: technicians.filter(tech => tech.role === 'admin').length
-  };
+  }), [technicians]);
 
   return (
     <TooltipProvider>
@@ -130,6 +185,15 @@ export default function TechniciansPage() {
               <h1 className="text-3xl font-bold text-gray-900">Gestão de Técnicos</h1>
               <p className="text-gray-500 mt-1">Gerencie os técnicos da sua empresa.</p>
             </div>
+            {currentUser?.role === 'admin' && (
+              <Button 
+                onClick={() => setInviteOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Convidar Técnico
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -226,6 +290,9 @@ export default function TechniciansPage() {
                       technician={technician}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      onToggleAdmin={handleToggleAdmin}
+                      onResendInvite={handleResendInvite}
+                      onGenerateLink={handleGenerateLink}
                     />
                   </div>
                 </TooltipTrigger>
@@ -255,6 +322,12 @@ export default function TechniciansPage() {
           onClose={handleCloseForm}
           onSubmit={handleSaveTechnician}
           isEditing={isEditing}
+        />
+
+        <InviteTechnicianModal
+          isOpen={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          onInvited={() => loadTechnicians()}
         />
 
         <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, technician: null })}>

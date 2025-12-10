@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import PropTypes from "prop-types";
 import { Input } from "@/components/ui/input";
 import { Search, FileText } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -117,4 +118,11 @@ export default function ProcessCatalog({
       )}
     </div>
   );
+}
+
+ProcessCatalog.propTypes = {
+  processes: PropTypes.array.isRequired,
+  instances: PropTypes.array.isRequired,
+  onSelectProcess: PropTypes.func.isRequired,
+  onSearchResultSelect: PropTypes.func,
 }

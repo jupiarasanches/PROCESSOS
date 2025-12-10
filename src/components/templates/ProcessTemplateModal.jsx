@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -173,6 +174,8 @@ export default function ProcessTemplateModal({ template, isOpen, onClose, onSubm
                       <SelectItem value="rh">RH</SelectItem>
                       <SelectItem value="comercial">Comercial</SelectItem>
                       <SelectItem value="ti">TI</SelectItem>
+                      <SelectItem value="agrimensura_topografico">Agrimensura/Levantamento Topográfico</SelectItem>
+                      <SelectItem value="regularizacao_fundiaria">Regularização Fundiária</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
@@ -278,4 +281,11 @@ export default function ProcessTemplateModal({ template, isOpen, onClose, onSubm
       </DialogContent>
     </Dialog>
   );
+}
+
+ProcessTemplateModal.propTypes = {
+  template: PropTypes.object,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 }

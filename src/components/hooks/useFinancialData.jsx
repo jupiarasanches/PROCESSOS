@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BankAccount, Contact, FinancialCategory, FinancialTransaction } from '@/api/entities';
+import { supabase } from '@/lib/supabaseClient';
 
 export function useFinancialData() {
   const [accounts, setAccounts] = useState([]);
@@ -13,23 +13,16 @@ export function useFinancialData() {
     setLoading(true);
     setError(null);
     try {
-      const [accountData, contactData, categoryData, transactionData] = await Promise.all([
-        BankAccount.list('-created_date'),
-        Contact.list('-created_date'),
-        FinancialCategory.list('-created_date'),
-        FinancialTransaction.list('-created_date')
-      ]);
-
-      setAccounts(accountData || []);
-      setContacts(contactData || []);
-      setCategories(categoryData || []);
-      setTransactions(transactionData || []);
-      
-      console.log('✅ Dados financeiros carregados:');
-      console.log('🏦 Contas:', accountData?.length || 0);
-      console.log('👥 Contatos:', contactData?.length || 0);
-      console.log('🏷️ Categorias:', categoryData?.length || 0);
-      console.log('💰 Transações:', transactionData?.length || 0);
+      const tables = ['bank_accounts','contacts','financial_categories','financial_transactions'];
+      const results = await Promise.all(tables.map(async (t) => {
+        const { data } = await supabase.from(t).select('*');
+        return data || [];
+      }));
+      const [accountData, contactData, categoryData, transactionData] = results;
+      setAccounts(accountData);
+      setContacts(contactData);
+      setCategories(categoryData);
+      setTransactions(transactionData);
     } catch (err) {
       console.error('❌ Erro ao carregar dados financeiros:', err);
       setError(err);

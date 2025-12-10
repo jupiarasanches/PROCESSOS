@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { AuditLog } from "@/api/entities";
+import { useState, useEffect } from "react";
+import { AuditLogService } from "@/services";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,10 +37,9 @@ export default function AuditLogPage() {
   const loadLogs = async () => {
     setLoading(true);
     try {
-      const allLogs = await AuditLog.list('-created_date', 500);
+      const allLogs = await AuditLogService.getAuditLogs({}, { orderBy: '-created_date', limit: 500 });
       setLogs(allLogs || []);
     } catch (error) {
-      console.error('Erro ao carregar logs de auditoria:', error);
       setLogs([]);
     } finally {
       setLoading(false);

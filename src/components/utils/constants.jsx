@@ -1,5 +1,14 @@
 // Status configurations
 export const STATUS_CONFIG = {
+  aguardando_analise: {
+    title: "Aguardando Análise",
+    color: "bg-white border-gray-200",
+    headerColor: "bg-white text-yellow-700 border border-yellow-200",
+    badgeColor: "bg-yellow-100 text-yellow-800",
+    icon: "Clock",
+    iconColor: "text-yellow-600",
+    accentBorder: "border-l-yellow-500"
+  },
   em_andamento: {
     title: "Em Andamento",
     color: "bg-white border-gray-200",
@@ -51,7 +60,9 @@ export const CATEGORY_COLORS = {
   operacional: "bg-blue-100 text-blue-800",
   juridico: "bg-purple-100 text-purple-800",
   qualidade: "bg-indigo-100 text-indigo-800",
-  administrativo: "bg-gray-100 text-gray-800"
+  administrativo: "bg-gray-100 text-gray-800",
+  agrimensura_topografico: "bg-sky-100 text-sky-800",
+  regularizacao_fundiaria: "bg-teal-100 text-teal-800"
 };
 
 export const CHART_COLORS = [

@@ -1,6 +1,6 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
 import { TrendingUp, FileText } from "lucide-react";
 import { CHART_COLORS } from '../utils/constants';
 
@@ -117,4 +117,7 @@ export default function ProcessTypeChart({ processes }) {
       </div>
     </Card>
   );
+}
+ProcessTypeChart.propTypes = {
+  processes: PropTypes.array.isRequired,
 }

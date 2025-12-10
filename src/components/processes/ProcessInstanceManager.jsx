@@ -1,4 +1,4 @@
-import React from "react";
+import PropTypes from "prop-types";
 import { FolderOpen } from "lucide-react";
 import ProcessKanban from "./ProcessKanban";
 import {
@@ -29,7 +29,7 @@ export default function ProcessInstanceManager({
         <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-gray-800">Nenhum processo criado ainda</h3>
         <p className="text-gray-500 mt-2">
-          Comece criando seu primeiro processo na aba "Catálogo de Processos".
+          Comece criando seu primeiro processo na aba &ldquo;Catálogo de Processos&rdquo;.
         </p>
       </div>
     );
@@ -53,4 +53,13 @@ export default function ProcessInstanceManager({
       </TooltipContent>
     </Tooltip>
   );
+}
+
+ProcessInstanceManager.propTypes = {
+  instances: PropTypes.array.isRequired,
+  processes: PropTypes.array.isRequired,
+  technicians: PropTypes.array.isRequired,
+  onStatusChange: PropTypes.func.isRequired,
+  onEditInstance: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
 }

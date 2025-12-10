@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -288,4 +289,16 @@ function StepEditCard({ step, index, onSave, onCancel }) {
       </CardContent>
     </Card>
   );
+}
+
+StepEditCard.propTypes = {
+  step: PropTypes.object.isRequired,
+  index: PropTypes.number.isRequired,
+  onSave: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
+}
+
+StepBuilder.propTypes = {
+  steps: PropTypes.array.isRequired,
+  onChange: PropTypes.func.isRequired,
 }

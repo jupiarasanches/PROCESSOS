@@ -1,6 +1,6 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { formatFileSize } from "@/components/utils/formatters";
 import {
   Dialog,
   DialogContent,
@@ -16,13 +16,6 @@ export default function DocumentViewer({ documents = [], isOpen, onClose, proces
     return <FileIcon className="w-5 h-5 text-gray-600" />;
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
 
   const handleDownload = (url, name) => {
     const link = document.createElement('a');
@@ -35,7 +28,7 @@ export default function DocumentViewer({ documents = [], isOpen, onClose, proces
   };
 
   const handleView = (url) => {
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (!documents || documents.length === 0) {
@@ -108,4 +101,11 @@ export default function DocumentViewer({ documents = [], isOpen, onClose, proces
       </DialogContent>
     </Dialog>
   );
+}
+
+DocumentViewer.propTypes = {
+  documents: PropTypes.array,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  processTitle: PropTypes.string,
 }

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import PropTypes from 'prop-types';
+import { Card, CardTitle } from "@/components/ui/card";
 import { Clock, FileText } from "lucide-react";
 
 export default function FeaturedProcesses({ processes, instances }) {
@@ -41,4 +41,8 @@ export default function FeaturedProcesses({ processes, instances }) {
       )}
     </Card>
   );
+}
+FeaturedProcesses.propTypes = {
+  processes: PropTypes.array.isRequired,
+  instances: PropTypes.array.isRequired,
 }

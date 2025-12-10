@@ -1,14 +1,15 @@
 
 
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { User } from "@/api/entities";
+import { AuthService } from "@/services";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Settings,
   FileText,
-  Play,
   Users,
   Bell,
   Search,
@@ -59,10 +60,18 @@ import {
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import SettingsModal from "./components/settings/SettingsModal";
+import SettingsModal from "@/components/settings/SettingsModal";
+
+async function refreshUser(setCurrentUser) {
+  try {
+    const user = await AuthService.getCurrentUser();
+    setCurrentUser(user);
+  } catch (e) {
+    console.error("Erro ao recarregar usuário:", e);
+  }
+}
 
 export default function Layout({ children, currentPageName }) {
-  const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProcessesOpen, setIsProcessesOpen] = useState(
@@ -76,6 +85,13 @@ export default function Layout({ children, currentPageName }) {
       icon: LayoutDashboard,
       current: currentPageName === "Dashboard",
       tooltip: "Visão geral dos dados e métricas"
+    },
+    {
+      name: "Gerenciamento SIMCAR",
+      href: createPageUrl("SimcarManagement"),
+      icon: FileText,
+      current: currentPageName === "SimcarManagement",
+      tooltip: "Gestão de processos SIMCAR"
     },
     {
       name: "Relatórios",
@@ -99,13 +115,6 @@ export default function Layout({ children, currentPageName }) {
       tooltip: "Gerenciar equipe e técnicos responsáveis"
     },
     {
-      name: "Modelos",
-      href: createPageUrl("ProcessTemplates"),
-      icon: FileText,
-      current: currentPageName === "ProcessTemplates",
-      tooltip: "Gerenciar modelos de processos"
-    },
-    {
       name: "Auditoria",
       href: createPageUrl("AuditLog"),
       icon: Shield,
@@ -113,18 +122,18 @@ export default function Layout({ children, currentPageName }) {
       tooltip: "Log de auditoria e rastreamento de alterações"
     },
     {
-      name: "Admin Dados",
+      name: "Novos Processos",
       href: createPageUrl("DataAdmin"),
       icon: Database,
       current: currentPageName === "DataAdmin",
-      tooltip: "Administrar dados do sistema"
+      tooltip: "Gerenciar e criar novos processos"
     },
   ];
 
   useEffect(() => {
     async function fetchUser() {
       try {
-        const user = await User.me();
+        const user = await AuthService.getCurrentUser();
         setCurrentUser(user);
       } catch (e) {
         setCurrentUser(null);
@@ -134,16 +143,25 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('inviteToken');
+    if (token) {
+      AuthService.acceptInvite(token)
+        .then(() => {
+          toast.success('Convite aceito! Faça login com seu e-mail.');
+          params.delete('inviteToken');
+          const url = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+          window.history.replaceState({}, '', url);
+        })
+        .catch((err) => {
+          toast.error(err?.message || 'Falha ao aceitar convite');
+        });
+    }
+  }, []);
+
+  useEffect(() => {
     if (!isSettingsOpen) {
-      async function refreshUser() {
-        try {
-          const user = await User.me();
-          setCurrentUser(user);
-        } catch (e) {
-          console.error("Erro ao recarregar usuário:", e);
-        }
-      }
-      refreshUser();
+      refreshUser(setCurrentUser);
     }
   }, [isSettingsOpen]);
 
@@ -152,7 +170,7 @@ export default function Layout({ children, currentPageName }) {
   }, [currentPageName]);
 
   const handleLogout = async () => {
-    await User.logout();
+    await AuthService.logout();
     window.location.reload();
   };
 
@@ -405,5 +423,10 @@ export default function Layout({ children, currentPageName }) {
       </SidebarProvider>
     </TooltipProvider>
   );
+}
+
+Layout.propTypes = {
+  children: PropTypes.node,
+  currentPageName: PropTypes.string.isRequired,
 }
 

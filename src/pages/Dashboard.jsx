@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, Sector } from 'recharts';
 import {
   Tooltip,
   TooltipContent,
@@ -23,19 +23,73 @@ import {
   Plus,
   Users,
   BarChart3,
-  Zap
+  Zap,
+  Trophy,
+  Medal,
+  CalendarClock,
+  ArrowRight
 } from "lucide-react";
 
 // Hooks personalizados
 import { useProcesses } from "../components/hooks/useProcesses";
-import { useInstances } from "../components/hooks/useInstances";
+import { useProcessInstances } from "../components/hooks/useProcessInstances";
 import { useTechnicians } from "../components/hooks/useTechnicians";
 
 export default function Dashboard() {
   // Usando hooks personalizados
   const { processes } = useProcesses();
-  const { instances, loading } = useInstances();
+  const { instances, loading } = useProcessInstances();
   const { technicians } = useTechnicians();
+  const [activeIndex, setActiveIndex] = React.useState(0);
+
+  // Renderiza a fatia ativa com destaque
+  const renderActiveShape = (props) => {
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+
+    return (
+      <g>
+        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-lg font-bold">
+          {payload.name}
+        </text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 10}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          cornerRadius={4}
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 12}
+          outerRadius={outerRadius + 15}
+          fill={fill}
+          cornerRadius={2}
+        />
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333">{`${value} Processos`}</text>
+        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999">
+          {`(${(percent * 100).toFixed(2)}%)`}
+        </text>
+      </g>
+    );
+  };
 
   // Atividades recentes
   const recentActivities = instances
@@ -50,27 +104,97 @@ export default function Dashboard() {
       technician: technicians.find(t => t.email === instance.technician_responsible)?.full_name || instance.technician_responsible?.split('@')[0]
     }));
 
-  // Dados para gráfico de burndown
-  const burndownData = React.useMemo(() => {
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      
-      const dayInstances = instances.filter(instance => {
-        const instanceDate = new Date(instance.created_date);
-        return instanceDate.toDateString() === date.toDateString();
+  // Dados para gráfico de pizza
+  const pieData = React.useMemo(() => {
+    const statusCounts = {
+      aguardando_analise: 0,
+      em_andamento: 0,
+      pendente: 0,
+      finalizado: 0,
+      cancelado: 0
+    };
+
+    instances.forEach(instance => {
+      // Normaliza o status caso venha diferente ou nulo
+      const status = instance.status || 'aguardando_analise';
+      if (statusCounts.hasOwnProperty(status)) {
+        statusCounts[status]++;
+      }
+    });
+
+    return [
+      { name: 'Aguardando Análise', value: statusCounts.aguardando_analise, color: '#EAB308' },
+      { name: 'Em Andamento', value: statusCounts.em_andamento, color: '#3B82F6' },
+      { name: 'Pendente', value: statusCounts.pendente, color: '#F97316' },
+      { name: 'Finalizado', value: statusCounts.finalizado, color: '#22C55E' },
+      { name: 'Cancelado', value: statusCounts.cancelado, color: '#EF4444' }
+    ].filter(item => item.value > 0);
+  }, [instances]);
+
+  // Ranking de Técnicos
+  const techniciansRanking = React.useMemo(() => {
+    const counts = {};
+    instances.forEach(instance => {
+      // Considera 'finalizado' como concluído/protocolado
+      if (instance.status === 'finalizado') {
+        const techEmail = instance.technician_responsible;
+        if (techEmail) {
+          counts[techEmail] = (counts[techEmail] || 0) + 1;
+        }
+      }
+    });
+
+    return Object.entries(counts)
+      .map(([email, count]) => {
+        const tech = technicians.find(t => t.email === email);
+        return {
+          email,
+          name: tech?.full_name || email.split('@')[0],
+          avatar: tech?.profile_picture_url,
+          position: tech?.position || 'Técnico',
+          count
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // Top 5
+  }, [instances, technicians]);
+
+  // Próximos Vencimentos
+  const upcomingDeadlines = React.useMemo(() => {
+    return instances
+      .filter(i => 
+        i.due_date && 
+        !['finalizado', 'cancelado'].includes(i.status)
+      )
+      .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+      .slice(0, 5)
+      .map(instance => {
+        const dueDate = new Date(instance.due_date);
+        const today = new Date();
+        const diffTime = dueDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        
+        let statusColor = 'bg-blue-100 text-blue-800';
+        let statusText = `${diffDays} dias restantes`;
+
+        if (diffDays < 0) {
+          statusColor = 'bg-red-100 text-red-800';
+          statusText = `Atrasado há ${Math.abs(diffDays)} dias`;
+        } else if (diffDays === 0) {
+          statusColor = 'bg-orange-100 text-orange-800';
+          statusText = 'Vence hoje';
+        } else if (diffDays <= 3) {
+          statusColor = 'bg-orange-100 text-orange-800';
+          statusText = `Vence em ${diffDays} dias`;
+        }
+
+        return {
+          ...instance,
+          statusColor,
+          statusText,
+          formattedDate: format(dueDate, "dd/MM/yyyy", { locale: ptBR })
+        };
       });
-      
-      const idealValue = Math.max(0, 25 - (6 - i) * 3);
-      
-      last7Days.push({
-        day: format(date, 'EEE', { locale: ptBR }),
-        ideal: idealValue, 
-        real: dayInstances.filter(i => i.status === 'finalizado').length
-      });
-    }
-    return last7Days;
   }, [instances]);
 
   if (loading) {
@@ -138,7 +262,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="space-y-0">
-                {recentActivities.map((activity, index) => (
+                {recentActivities.map((activity) => (
                   <Tooltip key={activity.id}>
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors cursor-pointer">
@@ -227,52 +351,63 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Progresso do Sprint */}
+          {/* Ranking de Técnicos */}
           <Card className="bg-white border-0 shadow-sm">
             <CardHeader className="border-b border-gray-100 pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Progresso do Sprint</CardTitle>
-                <Button variant="ghost" size="sm" className="text-blue-600">
-                  Ver detalhes
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  <CardTitle className="text-lg font-semibold">Ranking de Produtividade</CardTitle>
+                </div>
+                <Badge variant="secondary" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100">
+                  Top 5
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Sprint 15 - Processos do TI</span>
-                    <span className="text-xs text-gray-500">Fim: 15/02/2024</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mb-2">Início: 01/02/2024</div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Progresso</span>
-                        <span>68% concluído</span>
+                {techniciansRanking.length > 0 ? (
+                  techniciansRanking.map((tech, index) => (
+                    <div key={tech.email} className="flex items-center gap-4 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex-shrink-0 relative">
+                        <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-sm border-2 
+                          ${index === 0 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 
+                            index === 1 ? 'bg-gray-100 text-gray-700 border-gray-200' : 
+                            index === 2 ? 'bg-orange-100 text-orange-700 border-orange-200' : 
+                            'bg-white text-gray-500 border-transparent'}`}>
+                          {index + 1}º
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '68%' }}></div>
+                      
+                      <div className="flex-shrink-0">
+                        <img 
+                          src={tech.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tech.name)}&background=random`} 
+                          alt={tech.name}
+                          className="w-10 h-10 rounded-full border border-gray-200 object-cover"
+                        />
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>32 pontos completos</span>
-                        <span>15 pontos falta</span>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {tech.name}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {tech.position}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-end">
+                        <span className="text-lg font-bold text-blue-600">{tech.count}</span>
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wide">Finalizados</span>
                       </div>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold text-green-600">6</div>
-                        <div className="text-xs text-gray-500">Finalizados</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-blue-600">32</div>
-                        <div className="text-xs text-gray-500">Pontos Completos</div>
-                      </div>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Medal className="w-12 h-12 mx-auto text-gray-300 mb-2" />
+                    <p className="text-sm">Nenhum processo finalizado ainda.</p>
                   </div>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -280,80 +415,109 @@ export default function Dashboard() {
 
         {/* Seção Inferior */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Gráfico de Burndown */}
+          {/* Gráfico de Distribuição */}
           <Card className="bg-white border-0 shadow-sm">
             <CardHeader className="border-b border-gray-100 pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Gráfico de Burndown</CardTitle>
-                <Button variant="ghost" size="sm" className="text-blue-600">
-                  <Zap className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={burndownData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis 
-                      dataKey="day" 
-                      tick={{ fontSize: 12, fill: '#666' }}
-                      stroke="#999"
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12, fill: '#666' }}
-                      stroke="#999"
-                    />
-                    <RechartsTooltip />
-                    <Bar dataKey="ideal" fill="#e0e7ff" name="Ideal" />
-                    <Bar dataKey="real" fill="#3b82f6" name="Real" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">23</div>
-                  <div className="text-xs text-gray-500">Concluídas Esta Semana</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">31</div>
-                  <div className="text-xs text-gray-500">Em Andamento</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Visão Geral do Workspace */}
-          <Card className="bg-white border-0 shadow-sm">
-            <CardHeader className="border-b border-gray-100 pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Visão Geral do Workspace</CardTitle>
+                <CardTitle className="text-lg font-semibold">Status dos Processos</CardTitle>
                 <Button variant="ghost" size="sm" className="text-blue-600">
                   <BarChart3 className="w-4 h-4" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Projetos Ativos</span>
-                  <span className="text-2xl font-bold">{processes.filter(p => p.status === 'ativo').length}</span>
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      activeIndex={activeIndex}
+                      activeShape={renderActiveShape}
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={130}
+                      fill="#8884d8"
+                      dataKey="value"
+                      onMouseEnter={(_, index) => setActiveIndex(index)}
+                      paddingAngle={2}
+                      cornerRadius={4}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36} 
+                      iconType="circle"
+                      formatter={(value, entry) => (
+                        <span className="text-gray-600 font-medium ml-1">{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-gray-900">{instances.length}</div>
+                  <div className="text-xs text-gray-500">Total de Processos</div>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Membros da Equipe</span>
-                  <span className="text-2xl font-bold">{technicians.length}</span>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-gray-900">
+                    {instances.filter(i => i.status === 'finalizado').length}
+                  </div>
+                  <div className="text-xs text-gray-500">Concluídos</div>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Armazenamento do Workspace</span>
-                  <span className="text-sm font-medium">2.4 GB / 10 GB</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Próximos Vencimentos */}
+          <Card className="bg-white border-0 shadow-sm">
+            <CardHeader className="border-b border-gray-100 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-5 h-5 text-red-500" />
+                  <CardTitle className="text-lg font-semibold">Próximos Vencimentos</CardTitle>
                 </div>
-                
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '24%' }}></div>
-                </div>
+                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                  Ver todos <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {upcomingDeadlines.length > 0 ? (
+                  upcomingDeadlines.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                      <div className="min-w-0 flex-1 mr-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-gray-900 truncate">{item.title}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-2">
+                          <span>{item.municipality || 'N/A'}</span>
+                          <span>•</span>
+                          <span>{item.technician_responsible?.split('@')[0]}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <Badge className={`${item.statusColor} border-0`}>
+                          {item.statusText}
+                        </Badge>
+                        <span className="text-xs text-gray-400">
+                          {item.formattedDate}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-2 opacity-20" />
+                    <p className="text-sm">Tudo em dia! Nenhum vencimento próximo.</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

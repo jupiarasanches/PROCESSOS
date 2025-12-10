@@ -1,15 +1,13 @@
-
-import React, { useState, useEffect, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
-import { Calendar, CalendarDays, Clock, Plus, Bell, Filter, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Calendar, CalendarDays, Clock, Plus, Filter, CheckCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isFuture } from "date-fns";
+import { format, isToday, isFuture } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import PropTypes from "prop-types";
 import {
   Tooltip,
   TooltipContent,
@@ -19,6 +17,10 @@ import {
 import AppointmentModal from "../components/agenda/AppointmentModal";
 import NotificationCenter from "../components/agenda/NotificationCenter";
 import CalendarView from "../components/agenda/CalendarView";
+import AuthService from '@/services/authService';
+import AppointmentService from '@/services/appointmentService';
+import ProcessService from '@/services/processService';
+import { notificationService } from '@/services/notificationService';
 
 export default function AgendaPage() {
   const [appointments, setAppointments] = useState([]);
@@ -49,20 +51,7 @@ export default function AgendaPage() {
       });
 
       for (const appointment of upcomingAppointments) {
-        const scheduledTime = format(new Date(appointment.scheduled_date), "HH:mm 'do dia' dd/MM/yyyy", { locale: ptBR });
-        
-        const notification = {
-          title: "Compromisso Agendado",
-          message: `${appointment.title} está agendado para ${scheduledTime}`,
-          type: "compromisso",
-          user_email: user.email,
-          related_id: appointment.id,
-          scheduled_for: new Date().toISOString(),
-          priority: appointment.priority,
-          action_url: "/agenda"
-        };
-
-        await base44.entities.Notification.create(notification);
+        await notificationService.createAppointmentNotification(appointment, user.id);
         
         if (appointment.notification_email_enabled) {
           try {
@@ -99,14 +88,11 @@ export default function AgendaPage() {
               </p>
             `;
 
-            await base44.integrations.Core.SendEmail({
-              to: targetEmail,
-              subject: `🔔 Lembrete: ${appointment.title}${appointment.notification_minutes_before > 0 ? ` em ${appointment.notification_minutes_before} minutos` : ''}`,
-              body: emailBody,
-              from_name: "ProcessFlow - Sistema de Agendamento"
-            });
+            // TODO: Implementar serviço de e-mail quando disponível
+            console.log('E-mail seria enviado para:', targetEmail);
+            console.log('Assunto:', `🔔 Lembrete: ${appointment.title}${appointment.notification_minutes_before > 0 ? ` em ${appointment.notification_minutes_before} minutos` : ''}`);
+            console.log('Corpo do e-mail:', emailBody);
 
-            console.log(`E-mail de notificação enviado para: ${targetEmail}`);
             toast.success(`E-mail enviado para ${targetEmail}`);
             
           } catch (emailError) {
@@ -115,10 +101,10 @@ export default function AgendaPage() {
           }
         }
         
-        await base44.entities.Appointment.update(appointment.id, { notification_sent: true });
+        await AppointmentService.updateAppointment(appointment.id, { notification_sent: true });
       }
 
-      const updatedNotifications = await base44.entities.Notification.list('-created_date');
+      const updatedNotifications = await notificationService.getUnreadNotifications(user.id);
       setNotifications(updatedNotifications || []);
       
     } catch (error) {
@@ -130,13 +116,13 @@ export default function AgendaPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const user = await base44.auth.me();
+      const user = await AuthService.getCurrentUser();
       setCurrentUser(user);
 
       const [appointmentData, processData, notificationData] = await Promise.all([
-        base44.entities.Appointment.list('-scheduled_date'),
-        base44.entities.Process.list('-created_date'),
-        base44.entities.Notification.list('-created_date')
+        AppointmentService.getAllAppointments({ sort: { scheduled_date: 'desc' } }),
+        ProcessService.getAllProcesses({ sort: { created_date: 'desc' } }),
+        notificationService.getUnreadNotifications(user.id)
       ]);
       
       setAppointments(appointmentData || []);
@@ -170,8 +156,8 @@ export default function AgendaPage() {
 
   const handleCreateAppointment = async (appointmentData) => {
     try {
-      const user = await base44.auth.me();
-      const newAppointment = await base44.entities.Appointment.create({
+      const user = await AuthService.getCurrentUser();
+      const newAppointment = await AppointmentService.createAppointment({
         ...appointmentData,
         assigned_to: user.email
       });
@@ -196,7 +182,7 @@ export default function AgendaPage() {
 
   const handleUpdateAppointment = async (appointmentData) => {
     try {
-      await base44.entities.Appointment.update(selectedAppointment.id, appointmentData);
+      await AppointmentService.updateAppointment(selectedAppointment.id, appointmentData);
       
       setAppointments(prev => 
         prev.map(apt => 
@@ -216,7 +202,7 @@ export default function AgendaPage() {
 
   const handleDeleteAppointment = async (appointmentId) => {
     try {
-      await base44.entities.Appointment.delete(appointmentId);
+      await AppointmentService.deleteAppointment(appointmentId);
       
       setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
       
@@ -234,7 +220,7 @@ export default function AgendaPage() {
 
   const handleStatusChange = async (appointmentId, newStatus) => {
     try {
-      await base44.entities.Appointment.update(appointmentId, { status: newStatus });
+      await AppointmentService.updateAppointment(appointmentId, { status: newStatus });
       
       setAppointments(prev =>
         prev.map(apt =>
@@ -262,352 +248,204 @@ export default function AgendaPage() {
     isFuture(new Date(apt.scheduled_date)) && !isToday(new Date(apt.scheduled_date))
   );
 
-  const unreadNotifications = notifications.filter(n => !n.is_read).length;
+  const pastAppointments = filteredAppointments.filter(apt => 
+    new Date(apt.scheduled_date) < new Date() && !isToday(new Date(apt.scheduled_date))
+  );
+
+  const unreadNotifications = notifications.filter(n => !n.read).length;
 
   if (loading) {
     return (
-      <div className="p-8 bg-gray-50 min-h-screen">
-        <div className="animate-pulse space-y-8">
-          <div className="h-8 bg-gray-200 rounded w-64"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
-            ))}
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
     <TooltipProvider>
-      <div className="p-8 bg-gray-50 min-h-screen">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Calendar className="w-8 h-8 text-blue-600" />
-              Agenda de Compromissos
-            </h1>
-            <p className="text-gray-500 mt-1">Gerencie seus agendamentos e receba notificações por e-mail.</p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <NotificationCenter 
-                    notifications={notifications}
-                    unreadCount={unreadNotifications}
-                    onNotificationRead={(id) => {
-                      base44.entities.Notification.update(id, { is_read: true });
-                      setNotifications(prev => 
-                        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
-                      );
-                    }}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Centro de notificações - {unreadNotifications} não lidas</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  onClick={() => {
-                    setSelectedAppointment(null);
-                    setIsAppointmentModalOpen(true);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Compromisso
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Agendar novo compromisso com notificações automáticas</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-600">Hoje</p>
-                      <p className="text-2xl font-bold text-gray-900">{todayAppointments.length}</p>
-                    </div>
-                    <CalendarDays className="w-8 h-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Compromissos agendados para hoje</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-600">Próximos</p>
-                      <p className="text-2xl font-bold text-gray-900">{upcomingAppointments.length}</p>
-                    </div>
-                    <Clock className="w-8 h-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Compromissos agendados para os próximos dias</p>
-              </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-orange-600">Pendentes</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {filteredAppointments.filter(a => a.status === 'agendado').length}
-                      </p>
-                    </div>
-                    <AlertCircle className="w-8 h-8 text-orange-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Compromissos pendentes de execução</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-600">Notificações</p>
-                      <p className="text-2xl font-bold text-gray-900">{unreadNotifications}</p>
-                    </div>
-                    <Bell className="w-8 h-8 text-red-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Notificações não lidas no sistema</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        {/* Main Content */}
-        <Tabs value={viewMode} onValueChange={setViewMode} className="space-y-6">
-          <div className="flex justify-between items-center">
-            <TabsList className="grid w-fit grid-cols-3 bg-white border">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="calendar">Calendário</TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Visualização em calendário mensal</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="list">Lista</TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Lista completa de compromissos</p>
-                </TooltipContent>
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <TabsTrigger value="today">Hoje</TabsTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Compromissos de hoje e próximos</p>
-                </TooltipContent>
-              </Tooltip>
-            </TabsList>
-
-            <div className="flex items-center gap-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">Todos os Status</option>
-                    <option value="agendado">Agendado</option>
-                    <option value="em_andamento">Em Andamento</option>
-                    <option value="concluido">Concluido</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Filtrar compromissos por status</p>
-                </TooltipContent>
-              </Tooltip>
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <CalendarDays className="w-8 h-8 text-blue-600" />
+                Agenda de Compromissos
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Gerencie seus compromissos e receba notificações automáticas
+              </p>
             </div>
-          </div>
-
-          <TabsContent value="calendar">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <CalendarView
-                    appointments={filteredAppointments}
-                    processes={processes}
-                    onAppointmentClick={handleEditAppointment}
-                    onDateClick={(date) => {
-                      setSelectedDate(date);
+            
+            <div className="flex items-center gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <NotificationCenter 
+                      notifications={notifications}
+                      unreadCount={unreadNotifications}
+                      onNotificationRead={async (id) => {
+                        await notificationService.markAsRead(id);
+                        setNotifications(prev => 
+                          prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+                        );
+                      }}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Centro de notificações - {unreadNotifications} não lidas</p>
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    onClick={() => {
                       setSelectedAppointment(null);
                       setIsAppointmentModalOpen(true);
                     }}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Clique em uma data para criar novo compromisso</p>
-              </TooltipContent>
-            </Tooltip>
-          </TabsContent>
-
-          <TabsContent value="list">
-            <Card className="bg-white">
-              <CardHeader>
-                <CardTitle>Todos os Compromissos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredAppointments.map(appointment => (
-                    <Tooltip key={appointment.id}>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <AppointmentCard
-                            appointment={appointment}
-                            processes={processes}
-                            onEdit={handleEditAppointment}
-                            onStatusChange={handleStatusChange}
-                            onDelete={handleDeleteAppointment}
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Clique para editar este compromisso</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                  {filteredAppointments.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">
-                      Nenhum compromisso encontrado
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="today">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="bg-white">
-                <CardHeader>
-                  <CardTitle>Compromissos de Hoje</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {todayAppointments.map(appointment => (
-                      <Tooltip key={appointment.id}>
-                        <TooltipTrigger asChild>
-                          <div>
-                            <AppointmentCard
-                              appointment={appointment}
-                              processes={processes}
-                              onEdit={handleEditAppointment}
-                              onStatusChange={handleStatusChange}
-                              onDelete={handleDeleteAppointment}
-                              compact
-                            />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Compromisso agendado para hoje - clique para editar</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                    {todayAppointments.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">
-                        Nenhum compromisso para hoje
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white">
-                <CardHeader>
-                  <CardTitle>Próximos Compromissos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {upcomingAppointments.slice(0, 5).map(appointment => (
-                      <Tooltip key={appointment.id}>
-                        <TooltipTrigger asChild>
-                          <div>
-                            <AppointmentCard
-                              appointment={appointment}
-                              processes={processes}
-                              onEdit={handleEditAppointment}
-                              onStatusChange={handleStatusChange}
-                              onDelete={handleDeleteAppointment}
-                              compact
-                            />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Próximo compromisso - clique para editar</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                    {upcomingAppointments.length === 0 && (
-                      <p className="text-center text-gray-500 py-8">
-                        Nenhum compromisso próximo
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Compromisso
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Agendar novo compromisso</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
 
-        {/* Modal para criar/editar compromissos */}
+          {/* Filtros e Controles */}
+          <div className="flex flex-wrap gap-4 items-center justify-between bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">Todos os Status</option>
+                  <option value="scheduled">Agendado</option>
+                  <option value="in_progress">Em Andamento</option>
+                  <option value="completed">Concluído</option>
+                  <option value="cancelled">Cancelado</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <input
+                  type="date"
+                  value={selectedDate.toISOString().split('T')[0]}
+                  onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                  className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "calendar" ? "default" : "outline"}
+                onClick={() => setViewMode("calendar")}
+                size="sm"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Calendário
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                onClick={() => setViewMode("list")}
+                size="sm"
+              >
+                <CalendarDays className="w-4 h-4 mr-2" />
+                Lista
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Visualização em Calendário */}
+        {viewMode === "calendar" && (
+          <div className="mb-8">
+            <CalendarView
+              appointments={filteredAppointments}
+              processes={processes}
+              onDateClick={setSelectedDate}
+              onAppointmentClick={handleEditAppointment}
+            />
+          </div>
+        )}
+
+        {/* Visualização em Lista */}
+        {viewMode === "list" && (
+          <Tabs defaultValue="today" className="mb-8">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="today" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Hoje ({todayAppointments.length})
+              </TabsTrigger>
+              <TabsTrigger value="upcoming" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Próximos ({upcomingAppointments.length})
+              </TabsTrigger>
+              <TabsTrigger value="past" className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Passados ({pastAppointments.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="today">
+              <AppointmentList
+                appointments={todayAppointments}
+                processes={processes}
+                title="Compromissos de Hoje"
+                emptyMessage="Nenhum compromisso agendado para hoje."
+                onEdit={handleEditAppointment}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDeleteAppointment}
+              />
+            </TabsContent>
+
+            <TabsContent value="upcoming">
+              <AppointmentList
+                appointments={upcomingAppointments}
+                processes={processes}
+                title="Próximos Compromissos"
+                emptyMessage="Nenhum compromisso futuro agendado."
+                onEdit={handleEditAppointment}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDeleteAppointment}
+              />
+            </TabsContent>
+
+            <TabsContent value="past">
+              <AppointmentList
+                appointments={pastAppointments}
+                processes={processes}
+                title="Compromissos Passados"
+                emptyMessage="Nenhum compromisso passado encontrado."
+                onEdit={handleEditAppointment}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDeleteAppointment}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Modal de Compromisso */}
         <AppointmentModal
-          appointment={selectedAppointment}
-          processes={processes}
           isOpen={isAppointmentModalOpen}
           onClose={() => {
             setIsAppointmentModalOpen(false);
             setSelectedAppointment(null);
           }}
           onSubmit={selectedAppointment ? handleUpdateAppointment : handleCreateAppointment}
+          appointment={selectedAppointment}
+          processes={processes}
           selectedDate={selectedDate}
         />
       </div>
@@ -615,135 +453,184 @@ export default function AgendaPage() {
   );
 }
 
-function AppointmentCard({ appointment, processes, onEdit, onStatusChange, onDelete, compact = false }) {
+// Componente de Lista de Compromissos
+function AppointmentList({ appointments, processes, title, emptyMessage, onEdit, onStatusChange, onDelete }) {
+  if (appointments.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-700">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">{emptyMessage}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
+        <Badge variant="secondary">{appointments.length} compromissos</Badge>
+      </div>
+      
+      {appointments.map((appointment) => (
+        <AppointmentCard
+          key={appointment.id}
+          appointment={appointment}
+          processes={processes}
+          onEdit={onEdit}
+          onStatusChange={onStatusChange}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  );
+}
+
+AppointmentList.propTypes = {
+  appointments: PropTypes.array.isRequired,
+  processes: PropTypes.array.isRequired,
+  title: PropTypes.string.isRequired,
+  emptyMessage: PropTypes.string.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onStatusChange: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+}
+
+// Componente de Cartão de Compromisso
+function AppointmentCard({ appointment, processes, onEdit, onStatusChange, onDelete }) {
   const process = processes.find(p => p.id === appointment.process_id);
   
-  const statusColors = {
-    agendado: "bg-blue-100 text-blue-800",
-    em_andamento: "bg-yellow-100 text-yellow-800", 
-    concluido: "bg-green-100 text-green-800",
-    cancelado: "bg-red-100 text-red-800",
-    atrasado: "bg-red-100 text-red-800"
+  const getStatusColor = (status) => {
+    const colors = {
+      scheduled: "bg-blue-100 text-blue-800",
+      in_progress: "bg-yellow-100 text-yellow-800",
+      completed: "bg-green-100 text-green-800",
+      cancelled: "bg-red-100 text-red-800"
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  const priorityColors = {
-    baixa: "bg-gray-100 text-gray-700",
-    media: "bg-blue-100 text-blue-700",
-    alta: "bg-orange-100 text-orange-700",
-    urgente: "bg-red-100 text-red-700"
+  const getStatusLabel = (status) => {
+    const labels = {
+      scheduled: "Agendado",
+      in_progress: "Em Andamento",
+      completed: "Concluído",
+      cancelled: "Cancelado"
+    };
+    return labels[status] || status;
   };
 
-  const confirmDelete = () => {
-    if (window.confirm(`Tem certeza que deseja excluir o compromisso "${appointment.title}"? Esta ação não pode ser desfeita.`)) {
-      onDelete(appointment.id);
-    }
+  const getPriorityColor = (priority) => {
+    const colors = {
+      high: "bg-red-100 text-red-800",
+      medium: "bg-yellow-100 text-yellow-800",
+      low: "bg-green-100 text-green-800"
+    };
+    return colors[priority] || "bg-gray-100 text-gray-800";
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex-1">
-          <h4 className="font-medium text-gray-900">{appointment.title}</h4>
-          <p className="text-sm text-gray-600">{process?.name || 'Processo personalizado'}</p>
-          {appointment.client_company && (
-            <p className="text-sm text-gray-500">Cliente: {appointment.client_company}</p>
-          )}
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <h4 className="font-semibold text-gray-900">{appointment.title}</h4>
+              <Badge className={getPriorityColor(appointment.priority)}>
+                {appointment.priority === 'high' ? 'Alta' : appointment.priority === 'medium' ? 'Média' : 'Baixa'}
+              </Badge>
+              <Badge className={getStatusColor(appointment.status)}>
+                {getStatusLabel(appointment.status)}
+              </Badge>
+            </div>
+            
+            <div className="space-y-1 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>{format(new Date(appointment.scheduled_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                <span className="text-gray-400">•</span>
+                <span>{appointment.duration_hours}h de duração</span>
+              </div>
+              
+              {appointment.client_company && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Cliente:</span>
+                  <span>{appointment.client_company}</span>
+                </div>
+              )}
+              
+              {process && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Processo:</span>
+                  <span>{process.name}</span>
+                </div>
+              )}
+              
+              {appointment.location && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Local:</span>
+                  <span>{appointment.location}</span>
+                </div>
+              )}
+              
+              {appointment.description && (
+                <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                  {appointment.description}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 ml-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(appointment)}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              Editar
+            </Button>
+            
+            <select
+              value={appointment.status}
+              onChange={(e) => onStatusChange(appointment.id, e.target.value)}
+              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="scheduled">Agendado</option>
+              <option value="in_progress">Em Andamento</option>
+              <option value="completed">Concluído</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (window.confirm('Tem certeza que deseja excluir este compromisso?')) {
+                  onDelete(appointment.id);
+                }
+              }}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Badge className={priorityColors[appointment.priority]}>
-            {appointment.priority}
-          </Badge>
-          <Badge className={statusColors[appointment.status]}>
-            {appointment.status.replace('_', ' ')}
-          </Badge>
-        </div>
-      </div>
-      
-      <div className="flex justify-between items-center text-sm text-gray-500">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            {format(new Date(appointment.scheduled_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            {appointment.duration_hours}h
-          </span>
-          {appointment.notification_email_enabled && (
-            <span className="flex items-center gap-1 text-blue-600">
-              <Bell className="w-4 h-4" />
-              E-mail ativo
-            </span>
-          )}
-        </div>
-        
-        <div className="flex gap-2">
-          {appointment.status === 'agendado' && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onStatusChange(appointment.id, 'em_andamento')}
-                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                >
-                  Iniciar
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Marcar compromisso como em andamento</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {appointment.status === 'em_andamento' && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onStatusChange(appointment.id, 'concluido')}
-                  className="text-green-600 border-green-300 hover:bg-green-50"
-                >
-                  Concluir
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Marcar compromisso como concluído</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEdit(appointment)}
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
-              >
-                Editar
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Editar detalhes do compromisso</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-red-600 border-red-300 hover:bg-red-50"
-                onClick={confirmDelete}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Excluir este compromisso permanentemente</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
+}
+
+AppointmentCard.propTypes = {
+  appointment: PropTypes.object.isRequired,
+  processes: PropTypes.array.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onStatusChange: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
 }

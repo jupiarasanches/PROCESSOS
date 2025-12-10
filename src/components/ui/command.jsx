@@ -1,4 +1,5 @@
 import * as React from "react"
+import PropTypes from "prop-types"
 import { Command as CommandPrimitive } from "cmdk"
 import { Search } from "lucide-react"
 
@@ -16,6 +17,10 @@ const Command = React.forwardRef(({ className, ...props }, ref) => (
 ))
 Command.displayName = CommandPrimitive.displayName
 
+Command.propTypes = {
+  className: PropTypes.string,
+}
+
 const CommandDialog = ({
   children,
   ...props
@@ -32,8 +37,12 @@ const CommandDialog = ({
   );
 }
 
+CommandDialog.propTypes = {
+  children: PropTypes.node,
+}
+
 const CommandInput = React.forwardRef(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+  <div className="flex items-center border-b px-3" data-cmdk-input-wrapper="">
     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
       ref={ref}
@@ -45,6 +54,10 @@ const CommandInput = React.forwardRef(({ className, ...props }, ref) => (
   </div>
 ))
 
+CommandInput.propTypes = {
+  className: PropTypes.string,
+}
+
 CommandInput.displayName = CommandPrimitive.Input.displayName
 
 const CommandList = React.forwardRef(({ className, ...props }, ref) => (
@@ -55,6 +68,10 @@ const CommandList = React.forwardRef(({ className, ...props }, ref) => (
 ))
 
 CommandList.displayName = CommandPrimitive.List.displayName
+
+CommandList.propTypes = {
+  className: PropTypes.string,
+}
 
 const CommandEmpty = React.forwardRef((props, ref) => (
   <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
@@ -74,10 +91,18 @@ const CommandGroup = React.forwardRef(({ className, ...props }, ref) => (
 
 CommandGroup.displayName = CommandPrimitive.Group.displayName
 
+CommandGroup.propTypes = {
+  className: PropTypes.string,
+}
+
 const CommandSeparator = React.forwardRef(({ className, ...props }, ref) => (
   <CommandPrimitive.Separator ref={ref} className={cn("-mx-1 h-px bg-border", className)} {...props} />
 ))
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName
+
+CommandSeparator.propTypes = {
+  className: PropTypes.string,
+}
 
 const CommandItem = React.forwardRef(({ className, ...props }, ref) => (
   <CommandPrimitive.Item
@@ -91,6 +116,10 @@ const CommandItem = React.forwardRef(({ className, ...props }, ref) => (
 
 CommandItem.displayName = CommandPrimitive.Item.displayName
 
+CommandItem.propTypes = {
+  className: PropTypes.string,
+}
+
 const CommandShortcut = ({
   className,
   ...props
@@ -102,6 +131,10 @@ const CommandShortcut = ({
   );
 }
 CommandShortcut.displayName = "CommandShortcut"
+
+CommandShortcut.propTypes = {
+  className: PropTypes.string,
+}
 
 export {
   Command,

@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { FileText, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -48,4 +48,9 @@ export default function ProcessCard({ process, onSelect }) {
       </CardContent>
     </Card>
   );
+}
+
+ProcessCard.propTypes = {
+  process: PropTypes.object.isRequired,
+  onSelect: PropTypes.func.isRequired,
 }

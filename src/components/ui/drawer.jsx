@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import PropTypes from "prop-types"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
@@ -12,6 +13,10 @@ const Drawer = ({
   <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} {...props} />
 )
 Drawer.displayName = "Drawer"
+
+Drawer.propTypes = {
+  shouldScaleBackground: PropTypes.bool,
+}
 
 const DrawerTrigger = DrawerPrimitive.Trigger
 
@@ -26,6 +31,10 @@ const DrawerOverlay = React.forwardRef(({ className, ...props }, ref) => (
     {...props} />
 ))
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
+
+DrawerOverlay.propTypes = {
+  className: PropTypes.string,
+}
 
 const DrawerContent = React.forwardRef(({ className, children, ...props }, ref) => (
   <DrawerPortal>
@@ -44,6 +53,11 @@ const DrawerContent = React.forwardRef(({ className, children, ...props }, ref) 
 ))
 DrawerContent.displayName = "DrawerContent"
 
+DrawerContent.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const DrawerHeader = ({
   className,
   ...props
@@ -54,6 +68,11 @@ const DrawerHeader = ({
 )
 DrawerHeader.displayName = "DrawerHeader"
 
+DrawerHeader.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const DrawerFooter = ({
   className,
   ...props
@@ -61,6 +80,11 @@ const DrawerFooter = ({
   <div className={cn("mt-auto flex flex-col gap-2 p-4", className)} {...props} />
 )
 DrawerFooter.displayName = "DrawerFooter"
+
+DrawerFooter.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
 
 const DrawerTitle = React.forwardRef(({ className, ...props }, ref) => (
   <DrawerPrimitive.Title
@@ -70,6 +94,10 @@ const DrawerTitle = React.forwardRef(({ className, ...props }, ref) => (
 ))
 DrawerTitle.displayName = DrawerPrimitive.Title.displayName
 
+DrawerTitle.propTypes = {
+  className: PropTypes.string,
+}
+
 const DrawerDescription = React.forwardRef(({ className, ...props }, ref) => (
   <DrawerPrimitive.Description
     ref={ref}
@@ -77,6 +105,10 @@ const DrawerDescription = React.forwardRef(({ className, ...props }, ref) => (
     {...props} />
 ))
 DrawerDescription.displayName = DrawerPrimitive.Description.displayName
+
+DrawerDescription.propTypes = {
+  className: PropTypes.string,
+}
 
 export {
   Drawer,

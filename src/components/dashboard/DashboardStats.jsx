@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import StatCard from "./StatCard";
 import { FileText, Play, CheckCircle, AlertTriangle } from "lucide-react";
 
@@ -49,4 +49,8 @@ export default function DashboardStats({ processes, instances }) {
       />
     </div>
   );
+}
+DashboardStats.propTypes = {
+  processes: PropTypes.array.isRequired,
+  instances: PropTypes.array.isRequired,
 }

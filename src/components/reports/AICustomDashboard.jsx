@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,4 +146,11 @@ Para cada widget, especifique:
       </CardContent>
     </Card>
   );
+}
+
+AICustomDashboard.propTypes = {
+  instances: PropTypes.array.isRequired,
+  processes: PropTypes.array.isRequired,
+  technicians: PropTypes.array.isRequired,
+  onDashboardGenerated: PropTypes.func.isRequired,
 }

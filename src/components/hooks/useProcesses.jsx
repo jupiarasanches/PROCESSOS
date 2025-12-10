@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Process } from '@/api/entities';
+import { ProcessService } from '@/services';
 
 export function useProcesses() {
   const [processes, setProcesses] = useState([]);
@@ -10,7 +10,9 @@ export function useProcesses() {
     setLoading(true);
     setError(null);
     try {
-      const processData = await Process.list('-created_date');
+      const processData = await ProcessService.getAllProcesses({ 
+        orderBy: '-created_date' 
+      });
       setProcesses(processData || []);
       console.log('✅ Processos carregados:', processData?.length || 0);
     } catch (err) {

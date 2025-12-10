@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { TwilioConfig } from "@/api/entities";
+import { supabase } from '@/lib/supabaseClient';
 import { MessageCircle, Check, X, AlertCircle, ExternalLink, Copy } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,16 +41,16 @@ export default function TwilioSetupModal({ isOpen, onClose }) {
 
   const loadConfig = async () => {
     try {
-      const configs = await TwilioConfig.list('-created_date');
-      if (configs && configs.length > 0) {
-        setExistingConfig(configs[0]);
+      const { data } = await supabase.from('twilio_config').select('*').order('created_at', { ascending: false }).limit(1);
+      if (data && data.length > 0) {
+        setExistingConfig(data[0]);
         setConfig({
-          account_sid: configs[0].account_sid || '',
-          auth_token: '••••••••••••', // Não mostra o token real
-          whatsapp_from: configs[0].whatsapp_from || '',
-          is_active: configs[0].is_active || false,
-          is_sandbox: configs[0].is_sandbox !== false,
-          sandbox_join_code: configs[0].sandbox_join_code || ''
+          account_sid: data[0].account_sid || '',
+          auth_token: '••••••••••••',
+          whatsapp_from: data[0].whatsapp_from || '',
+          is_active: data[0].is_active || false,
+          is_sandbox: data[0].is_sandbox !== false,
+          sandbox_join_code: data[0].sandbox_join_code || ''
         });
       }
     } catch (error) {
@@ -80,10 +81,15 @@ export default function TwilioSetupModal({ isOpen, onClose }) {
       };
 
       if (existingConfig) {
-        await TwilioConfig.update(existingConfig.id, configData);
+        const { error } = await supabase
+          .from('twilio_config')
+          .update({ ...configData, updated_at: new Date().toISOString() })
+          .eq('id', existingConfig.id);
+        if (error) throw error;
         toast.success('Configuração atualizada!');
       } else {
-        await TwilioConfig.create(configData);
+        const { error } = await supabase.from('twilio_config').insert(configData);
+        if (error) throw error;
         toast.success('Twilio configurado com sucesso!');
       }
 
@@ -315,4 +321,9 @@ export default function TwilioSetupModal({ isOpen, onClose }) {
       </DialogContent>
     </Dialog>
   );
+}
+
+TwilioSetupModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 }

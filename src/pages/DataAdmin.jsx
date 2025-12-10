@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from "react";
-import { Process, ProcessInstance, User } from "@/api/entities";
+import { useState, useEffect, useMemo } from "react";
+import { ProcessService, ProcessInstanceService, UsersService, AuthService } from "@/services";
+import { CATEGORY_COLORS } from "@/components/utils/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,9 +35,20 @@ export default function DataAdminPage() {
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, type: '', item: null });
   const [isNewProcessModalOpen, setIsNewProcessModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [selectedProcess, setSelectedProcess] = useState(null);
+
+  const instancesCountByProcess = useMemo(() => {
+    return instances.reduce((acc, inst) => {
+      const pid = inst.process_id;
+      acc[pid] = (acc[pid] || 0) + 1;
+      return acc;
+    }, {});
+  }, [instances]);
 
   useEffect(() => {
     loadAllData();
+    AuthService.getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
   }, []);
 
   const loadAllData = async () => {
@@ -44,9 +56,9 @@ export default function DataAdminPage() {
     try {
       // CARREGA TODOS OS DADOS SEM FILTROS - VISÍVEL PARA TODOS
       const [processData, instanceData, userData] = await Promise.all([
-        Process.list('-created_date'),
-        ProcessInstance.list('-created_date'),
-        User.list('-created_date')
+        ProcessService.getAllProcesses({ orderBy: '-created_date' }),
+        ProcessInstanceService.getAllInstances({ orderBy: '-created_date' }),
+        UsersService.getAllUsers({ orderBy: '-created_date' })
       ]);
       
       setProcesses(processData || []);
@@ -65,12 +77,22 @@ export default function DataAdminPage() {
     }
   };
 
-  const handleCreateNewProcess = async (processData) => {
+  const handleCreateNewProcess = async (processData, processId) => {
     try {
-      await Process.create(processData);
-      toast.success("Novo processo criado com sucesso!");
+      if (!currentUser) {
+        toast.error('Faça login para criar processos.');
+        return;
+      }
+      if (processId) {
+        await ProcessService.updateProcess(processId, processData);
+        toast.success("Processo atualizado com sucesso!");
+      } else {
+        await ProcessService.createProcess(processData);
+        toast.success("Novo processo criado com sucesso!");
+      }
       await loadAllData();
       setIsNewProcessModalOpen(false);
+      setSelectedProcess(null);
     } catch (error) {
       console.error('Erro ao criar processo:', error);
       toast.error("Erro ao criar novo processo");
@@ -80,15 +102,15 @@ export default function DataAdminPage() {
   const handleDelete = async (type, item) => {
     try {
       if (type === 'process') {
-        await Process.delete(item.id);
+        await ProcessService.deleteProcess(item.id);
         setProcesses(prev => prev.filter(p => p.id !== item.id));
         toast.success("Processo removido com sucesso!");
       } else if (type === 'instance') {
-        await ProcessInstance.delete(item.id);
+        await ProcessInstanceService.deleteInstance(item.id);
         setInstances(prev => prev.filter(i => i.id !== item.id));
         toast.success("Instância removida com sucesso!");
       } else if (type === 'user') {
-        await User.delete(item.id);
+        await UsersService.deleteUser(item.id);
         setTechnicians(prev => prev.filter(u => u.id !== item.id));
         toast.success("Usuário removido com sucesso!");
       }
@@ -101,6 +123,10 @@ export default function DataAdminPage() {
   };
 
   const openDeleteDialog = (type, item) => {
+    if (type === 'process' && currentUser?.role !== 'admin') {
+      toast.error('Apenas administradores podem excluir processos.');
+      return;
+    }
     setDeleteDialog({ open: true, type, item });
   };
 
@@ -120,9 +146,9 @@ export default function DataAdminPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Database className="w-8 h-8 text-blue-600" />
-            Administração de Dados
+            Novos Processos
           </h1>
-          <p className="text-gray-500 mt-1">Gerencie todos os dados do sistema.</p>
+          <p className="text-gray-500 mt-1">Gerencie e crie novos processos do sistema.</p>
         </div>
 
         <Tabs defaultValue="processes" className="space-y-6">
@@ -167,70 +193,62 @@ export default function DataAdminPage() {
           <TabsContent value="processes" className="space-y-4">
             {/* Header com botão de criar novo processo */}
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Processos Cadastrados</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Serviços Cadastrados</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
-                    onClick={() => setIsNewProcessModalOpen(true)}
+                    onClick={() => {
+                      if (!currentUser) {
+                        toast.error('Faça login para criar novos processos.');
+                        return;
+                      }
+                      setIsNewProcessModalOpen(true);
+                    }}
                     className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                    disabled={!currentUser}
                   >
                     <Plus className="w-4 h-4" />
                     Novo Processo
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Criar novo tipo de processo no sistema</p>
+                  <p>{currentUser ? 'Criar novo processo no sistema' : 'Requer login'}</p>
                 </TooltipContent>
               </Tooltip>
             </div>
-
-            <div className="grid gap-4">
-              {processes.map((process) => (
-                <Tooltip key={process.id}>
-                  <TooltipTrigger asChild>
-                    <Card className="bg-white hover:shadow-md transition-shadow cursor-pointer">
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg">{process.name}</CardTitle>
-                          <p className="text-sm text-gray-600">{process.description}</p>
-                          <div className="flex gap-2 mt-2">
-                            <Badge variant="outline" className="capitalize">
-                              {process.category}
-                            </Badge>
-                            <Badge variant="outline">
-                              {process.steps?.length || 0} etapas
-                            </Badge>
-                            <Badge variant="outline" className="capitalize">
-                              {process.status}
-                            </Badge>
-                            <Badge variant="outline" className="capitalize">
-                              Prioridade: {process.priority}
-                            </Badge>
-                          </div>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              onClick={() => openDeleteDialog('process', process)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Excluir este processo permanentemente</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </CardHeader>
-                    </Card>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Processo: {process.name} • {process.steps?.length || 0} etapas</p>
-                  </TooltipContent>
-                </Tooltip>
+            {/* Cards por serviço: nome, categoria e quantidade de processos cadastrados */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {processes.map((p) => (
+                <Card key={p.id} className="bg-white hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base font-semibold">{p.name}</CardTitle>
+                      <div className="mt-2">
+                        <Badge className={`${CATEGORY_COLORS[p.category] || 'bg-gray-100 text-gray-800'} capitalize`}>{(p.category || 'sem categoria').replace('_', ' ')}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-gray-700">{instancesCountByProcess[p.id] || 0} processo{(instancesCountByProcess[p.id] || 0) > 1 ? 's' : ''}</Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="icon" variant="outline" onClick={() => { if (currentUser?.role !== 'admin') { toast.error('Apenas administradores podem editar.'); return; } setSelectedProcess(p); setIsNewProcessModalOpen(true); }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Editar serviço</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="icon" variant="destructive" disabled={currentUser?.role !== 'admin'} onClick={() => openDeleteDialog('process', p)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>{currentUser?.role === 'admin' ? 'Excluir serviço' : 'Requer admin'}</p></TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </CardHeader>
+                </Card>
               ))}
-              
               {processes.length === 0 && (
                 <Card className="bg-white">
                   <CardContent className="p-8 text-center text-gray-500">
@@ -369,8 +387,9 @@ export default function DataAdminPage() {
         {/* Modal para criar novo processo */}
         <NewProcessModal 
           isOpen={isNewProcessModalOpen}
-          onClose={() => setIsNewProcessModalOpen(false)}
+          onClose={() => { setIsNewProcessModalOpen(false); setSelectedProcess(null); }}
           onSubmit={handleCreateNewProcess}
+          process={selectedProcess}
         />
 
         <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, type: '', item: null })}>

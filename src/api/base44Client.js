@@ -1,8 +1,10 @@
-import { createClient } from '@base44/sdk';
-// import { getAccessToken } from '@base44/sdk/utils/auth-utils';
+// Cliente mock para substituir o Base44 SDK
+// Este arquivo fornece implementações locais das funcionalidades que estavam no Base44
 
-// Create a client with authentication required
-export const base44 = createClient({
-  appId: "68bde892f6b5931896bed683", 
-  requiresAuth: true // Ensure authentication is required for all operations
-});
+import mockClient from './mockClient';
+
+// Exportar o cliente mock como se fosse o Base44
+export const base44 = mockClient;
+
+// Exportar como padrão também
+export default { base44 };

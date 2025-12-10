@@ -1,4 +1,5 @@
 import * as React from "react"
+import PropTypes from "prop-types"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -16,6 +17,10 @@ const Pagination = ({
 )
 Pagination.displayName = "Pagination"
 
+Pagination.propTypes = {
+  className: PropTypes.string,
+}
+
 const PaginationContent = React.forwardRef(({ className, ...props }, ref) => (
   <ul
     ref={ref}
@@ -24,10 +29,18 @@ const PaginationContent = React.forwardRef(({ className, ...props }, ref) => (
 ))
 PaginationContent.displayName = "PaginationContent"
 
+PaginationContent.propTypes = {
+  className: PropTypes.string,
+}
+
 const PaginationItem = React.forwardRef(({ className, ...props }, ref) => (
   <li ref={ref} className={cn("", className)} {...props} />
 ))
 PaginationItem.displayName = "PaginationItem"
+
+PaginationItem.propTypes = {
+  className: PropTypes.string,
+}
 
 const PaginationLink = ({
   className,
@@ -45,6 +58,12 @@ const PaginationLink = ({
 )
 PaginationLink.displayName = "PaginationLink"
 
+PaginationLink.propTypes = {
+  className: PropTypes.string,
+  isActive: PropTypes.bool,
+  size: PropTypes.oneOf(["icon", "default"]),
+}
+
 const PaginationPrevious = ({
   className,
   ...props
@@ -59,6 +78,10 @@ const PaginationPrevious = ({
   </PaginationLink>
 )
 PaginationPrevious.displayName = "PaginationPrevious"
+
+PaginationPrevious.propTypes = {
+  className: PropTypes.string,
+}
 
 const PaginationNext = ({
   className,
@@ -75,6 +98,10 @@ const PaginationNext = ({
 )
 PaginationNext.displayName = "PaginationNext"
 
+PaginationNext.propTypes = {
+  className: PropTypes.string,
+}
+
 const PaginationEllipsis = ({
   className,
   ...props
@@ -88,6 +115,10 @@ const PaginationEllipsis = ({
   </span>
 )
 PaginationEllipsis.displayName = "PaginationEllipsis"
+
+PaginationEllipsis.propTypes = {
+  className: PropTypes.string,
+}
 
 export {
   Pagination,

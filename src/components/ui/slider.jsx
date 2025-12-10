@@ -1,4 +1,5 @@
 import * as React from "react"
+import PropTypes from "prop-types"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 
 import { cn } from "@/lib/utils"
@@ -17,5 +18,9 @@ const Slider = React.forwardRef(({ className, ...props }, ref) => (
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName
+
+Slider.propTypes = {
+  className: PropTypes.string,
+}
 
 export { Slider }

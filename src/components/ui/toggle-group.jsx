@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react"
+import PropTypes from "prop-types"
 import * as ToggleGroupPrimitive from "@radix-ui/react-toggle-group"
 
 import { cn } from "@/lib/utils"
@@ -23,6 +24,13 @@ const ToggleGroup = React.forwardRef(({ className, variant, size, children, ...p
 
 ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName
 
+ToggleGroup.propTypes = {
+  className: PropTypes.string,
+  variant: PropTypes.string,
+  size: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const ToggleGroupItem = React.forwardRef(({ className, children, variant, size, ...props }, ref) => {
   const context = React.useContext(ToggleGroupContext)
 
@@ -40,5 +48,12 @@ const ToggleGroupItem = React.forwardRef(({ className, children, variant, size, 
 })
 
 ToggleGroupItem.displayName = ToggleGroupPrimitive.Item.displayName
+
+ToggleGroupItem.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+  variant: PropTypes.string,
+  size: PropTypes.string,
+}
 
 export { ToggleGroup, ToggleGroupItem }

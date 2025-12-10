@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
+import PropTypes from 'prop-types';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -163,6 +164,7 @@ function ProcessCard({ instance, processName, technicians, onEdit, index }) {
                     }
                     alt="Técnico"
                     className="w-6 h-6 rounded-full object-cover flex-shrink-0 border border-gray-200"
+                    loading="lazy"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">
@@ -210,6 +212,16 @@ function ProcessCard({ instance, processName, technicians, onEdit, index }) {
   );
 }
 
+const MemoProcessCard = memo(ProcessCard);
+
+ProcessCard.propTypes = {
+  instance: PropTypes.object.isRequired,
+  processName: PropTypes.string,
+  technicians: PropTypes.array.isRequired,
+  onEdit: PropTypes.func,
+  index: PropTypes.number.isRequired,
+}
+
 function Column({ status, instances = [], processes = [], technicians = [], onEdit }) {
   const config = statusConfig[status];
   const count = instances.length;
@@ -246,7 +258,7 @@ function Column({ status, instances = [], processes = [], technicians = [], onEd
               const processName = processes.find(p => p.id === instance.process_id)?.name || 'N/A';
               
               return (
-                <ProcessCard
+                <MemoProcessCard
                   key={instance.id}
                   instance={instance}
                   processName={processName}
@@ -268,6 +280,14 @@ function Column({ status, instances = [], processes = [], technicians = [], onEd
       </Droppable>
     </div>
   );
+}
+
+Column.propTypes = {
+  status: PropTypes.string.isRequired,
+  instances: PropTypes.array,
+  processes: PropTypes.array,
+  technicians: PropTypes.array,
+  onEdit: PropTypes.func,
 }
 
 export default function ProcessKanban({ instances = [], processes = [], technicians = [], onStatusChange, onEdit }) {
@@ -332,4 +352,12 @@ export default function ProcessKanban({ instances = [], processes = [], technici
       </DragDropContext>
     </div>
   );
+}
+
+ProcessKanban.propTypes = {
+  instances: PropTypes.array,
+  processes: PropTypes.array,
+  technicians: PropTypes.array,
+  onStatusChange: PropTypes.func.isRequired,
+  onEdit: PropTypes.func,
 }

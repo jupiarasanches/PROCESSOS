@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import {
   FileText, 
   User, 
   Calendar, 
-  ChevronRight,
   Eye,
   Plus,
   Edit,
@@ -243,4 +243,10 @@ export default function AuditLogViewer({ logs, entityType, entityId }) {
       </Dialog>
     </>
   );
+}
+
+AuditLogViewer.propTypes = {
+  logs: PropTypes.array.isRequired,
+  entityType: PropTypes.string,
+  entityId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 }

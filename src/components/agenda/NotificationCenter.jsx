@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Bell, X, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
+import { Bell, CheckCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -118,4 +119,10 @@ export default function NotificationCenter({ notifications, unreadCount, onNotif
       </PopoverContent>
     </Popover>
   );
+}
+
+NotificationCenter.propTypes = {
+  notifications: PropTypes.array.isRequired,
+  unreadCount: PropTypes.number.isRequired,
+  onNotificationRead: PropTypes.func.isRequired,
 }

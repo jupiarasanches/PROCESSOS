@@ -1,4 +1,4 @@
-import * as React from "react"
+import PropTypes from "prop-types"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
@@ -67,5 +67,12 @@ function Calendar({
   );
 }
 Calendar.displayName = "Calendar"
+
+Calendar.propTypes = {
+  className: PropTypes.string,
+  classNames: PropTypes.object,
+  showOutsideDays: PropTypes.bool,
+  mode: PropTypes.string,
+}
 
 export { Calendar }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Appointment } from '@/api/entities';
+import { AppointmentService } from '@/services';
 
 export function useAppointments() {
   const [appointments, setAppointments] = useState([]);
@@ -10,7 +10,9 @@ export function useAppointments() {
     setLoading(true);
     setError(null);
     try {
-      const appointmentData = await Appointment.list('-scheduled_date');
+      const appointmentData = await AppointmentService.getAllAppointments({ 
+        orderBy: '-scheduled_date' 
+      });
       setAppointments(appointmentData || []);
       console.log('✅ Compromissos carregados:', appointmentData?.length || 0);
     } catch (err) {

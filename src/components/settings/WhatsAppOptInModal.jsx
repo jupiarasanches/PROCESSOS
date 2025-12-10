@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -300,4 +301,9 @@ export default function WhatsAppOptInModal({ isOpen, onClose }) {
       </DialogContent>
     </Dialog>
   );
+}
+
+WhatsAppOptInModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 }

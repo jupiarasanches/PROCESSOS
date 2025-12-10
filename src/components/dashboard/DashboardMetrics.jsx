@@ -1,4 +1,4 @@
-import React from "react";
+import PropTypes from "prop-types";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   FileText, 
@@ -12,7 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export default function DashboardMetrics({ instances, processes = [] }) {
+export default function DashboardMetrics({ instances }) {
   const stats = {
     activeProcesses: instances.filter(i => i.status === 'em_andamento').length,
     totalInstances: instances.length, // Renomeado para ser mais claro
@@ -116,4 +116,8 @@ export default function DashboardMetrics({ instances, processes = [] }) {
       ))}
     </div>
   );
+}
+DashboardMetrics.propTypes = {
+  instances: PropTypes.array.isRequired,
+  processes: PropTypes.array,
 }

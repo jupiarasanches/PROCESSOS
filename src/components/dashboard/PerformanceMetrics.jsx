@@ -1,10 +1,11 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Clock, Target, TrendingUp, Award } from "lucide-react";
 
 export default function PerformanceMetrics({ instances, technicians }) {
-  const metrics = React.useMemo(() => {
+  const metrics = useMemo(() => {
     const completedInstances = instances.filter(i => i.status === 'finalizado');
     const onTimeCompletions = completedInstances.filter(i => {
       if (!i.due_date) return true;
@@ -126,4 +127,8 @@ export default function PerformanceMetrics({ instances, technicians }) {
       </CardContent>
     </Card>
   );
+}
+PerformanceMetrics.propTypes = {
+  instances: PropTypes.array.isRequired,
+  technicians: PropTypes.array.isRequired,
 }

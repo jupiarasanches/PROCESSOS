@@ -1,21 +1,16 @@
 
-import React, { useState } from "react";
-import { User } from "@/api/entities";
-import { ProcessInstance } from "@/api/entities";
+import { useState } from "react";
+import { AuthService } from "@/services";
+import { SimcarService } from "@/services";
 import ProcessCatalog from "../components/processes/ProcessCatalog";
 import ProcessModal from "../components/processes/ProcessModal";
 import { FileText, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Hooks personalizados
 import { useProcesses } from "../components/hooks/useProcesses";
-import { useInstances } from "../components/hooks/useInstances";
+import { useProcessInstances } from "../components/hooks/useProcessInstances";
 import { useAuditLog } from "../components/hooks/useAuditLog";
 
 export default function ProcessesPage() {
@@ -24,10 +19,10 @@ export default function ProcessesPage() {
 
   // Hooks personalizados para dados
   const { processes, loading: processesLoading } = useProcesses();
-  const { 
+  const {
     instances,
-    addInstance 
-  } = useInstances(false); // Não carrega automaticamente, só quando necessário
+    createInstance
+  } = useProcessInstances();
   const { logCreation } = useAuditLog();
 
   const handleSelectProcess = (processId) => {
@@ -40,42 +35,26 @@ export default function ProcessesPage() {
 
   const handleCreateInstance = async (formData) => {
     try {
-      const currentUser = await User.me();
+      const currentUser = await AuthService.getCurrentUser();
 
       const instanceData = {
+        ...formData,
         process_id: selectedProcess.id,
-        title: formData.title,
-        client_company: formData.client_company,
-        technician_responsible: formData.technician_responsible,
-        requester: currentUser.email,
-        priority: formData.priority,
-        area_hectares: formData.area_hectares,
-        municipality: formData.municipality,
-        due_date: formData.due_date,
-        description: formData.description,
-        documents: formData.documents || [],
-        status: 'aguardando_analise',
-        current_step: 0,
-        deadline_notification_email: formData.deadline_notification_email,
-        deadline_notification_email_address: formData.deadline_notification_email_address,
-        deadline_notification_whatsapp: formData.deadline_notification_whatsapp,
-        deadline_notification_days_before: formData.deadline_notification_days_before,
-        recurring_notification_enabled: formData.recurring_notification_enabled,
-        recurring_notification_frequency: formData.recurring_notification_frequency,
-        recurring_notification_time: formData.recurring_notification_time,
-        recurring_notification_email: formData.recurring_notification_email,
-        recurring_notification_whatsapp: formData.recurring_notification_whatsapp,
-        history: [{
-          step: 0,
-          action: 'criado',
-          user: currentUser.email,
-          timestamp: new Date().toISOString(),
-          comment: `Processo iniciado em aguardando análise${formData.documents?.length ? ` com ${formData.documents.length} documento(s)` : ''}`
-        }]
+        requester: currentUser?.email || 'Sistema'
       };
 
-      const newInstance = await ProcessInstance.create(instanceData);
-      addInstance(newInstance);
+      const newInstance = await createInstance(instanceData);
+
+      // Se for SIMCAR, criar/atualizar detalhes com CAR e Propriedade
+      if ((selectedProcess?.name || '').toUpperCase().includes('SIMCAR')) {
+        const carMatch = (formData.title || '').match(/MT[-\s]?\d+(?:\/\d{4})?/i);
+        const carNumber = carMatch ? carMatch[0].toUpperCase().replace(/\s+/g, '') : null;
+        await SimcarService.updateSimcarDetails(newInstance.id, {
+          car_number: carNumber,
+          property_name: formData.property_name || '',
+          technician_responsible: formData.technician_responsible
+        });
+      }
 
       // Log de auditoria
       await logCreation(

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import PropTypes from "prop-types"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 
@@ -25,6 +26,10 @@ const DialogOverlay = React.forwardRef(({ className, ...props }, ref) => (
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+DialogOverlay.propTypes = {
+  className: PropTypes.string,
+}
+
 const DialogContent = React.forwardRef(({ className, children, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
@@ -46,6 +51,11 @@ const DialogContent = React.forwardRef(({ className, children, ...props }, ref) 
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+DialogContent.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const DialogHeader = ({
   className,
   ...props
@@ -55,6 +65,11 @@ const DialogHeader = ({
     {...props} />
 )
 DialogHeader.displayName = "DialogHeader"
+
+DialogHeader.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
 
 const DialogFooter = ({
   className,
@@ -66,6 +81,11 @@ const DialogFooter = ({
 )
 DialogFooter.displayName = "DialogFooter"
 
+DialogFooter.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const DialogTitle = React.forwardRef(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
@@ -74,6 +94,10 @@ const DialogTitle = React.forwardRef(({ className, ...props }, ref) => (
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
+DialogTitle.propTypes = {
+  className: PropTypes.string,
+}
+
 const DialogDescription = React.forwardRef(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
@@ -81,6 +105,10 @@ const DialogDescription = React.forwardRef(({ className, ...props }, ref) => (
     {...props} />
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+DialogDescription.propTypes = {
+  className: PropTypes.string,
+}
 
 export {
   Dialog,

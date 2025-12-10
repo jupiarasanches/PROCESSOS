@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileService } from '../services/fileService';
+import { FileService } from '@/services';
 
 export const useFileUpload = () => {
   const [uploading, setUploading] = useState(false);
@@ -11,18 +11,9 @@ export const useFileUpload = () => {
     setUploading(true);
     try {
       const results = await FileService.uploadFiles(Array.from(files));
-      
-      const successfulUploads = results
-        .filter(result => result.success)
-        .map(result => result.document);
-      
-      if (successfulUploads.length > 0) {
-        setDocuments(prev => [...prev, ...successfulUploads]);
-      }
-
+      const successfulUploads = results.filter(r => r.success).map(r => r.document);
+      if (successfulUploads.length > 0) setDocuments(prev => [...prev, ...successfulUploads]);
       return results;
-    } catch (error) {
-      throw error;
     } finally {
       setUploading(false);
     }

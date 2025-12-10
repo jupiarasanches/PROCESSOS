@@ -1,4 +1,5 @@
 import * as React from "react"
+import PropTypes from "prop-types"
 import { Slot } from "@radix-ui/react-slot"
 import { ChevronRight, MoreHorizontal } from "lucide-react"
 
@@ -8,6 +9,9 @@ const Breadcrumb = React.forwardRef(
   ({ ...props }, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />
 )
 Breadcrumb.displayName = "Breadcrumb"
+
+Breadcrumb.propTypes = {
+}
 
 const BreadcrumbList = React.forwardRef(({ className, ...props }, ref) => (
   <ol
@@ -20,6 +24,10 @@ const BreadcrumbList = React.forwardRef(({ className, ...props }, ref) => (
 ))
 BreadcrumbList.displayName = "BreadcrumbList"
 
+BreadcrumbList.propTypes = {
+  className: PropTypes.string,
+}
+
 const BreadcrumbItem = React.forwardRef(({ className, ...props }, ref) => (
   <li
     ref={ref}
@@ -27,6 +35,10 @@ const BreadcrumbItem = React.forwardRef(({ className, ...props }, ref) => (
     {...props} />
 ))
 BreadcrumbItem.displayName = "BreadcrumbItem"
+
+BreadcrumbItem.propTypes = {
+  className: PropTypes.string,
+}
 
 const BreadcrumbLink = React.forwardRef(({ asChild, className, ...props }, ref) => {
   const Comp = asChild ? Slot : "a"
@@ -40,6 +52,11 @@ const BreadcrumbLink = React.forwardRef(({ asChild, className, ...props }, ref) 
 })
 BreadcrumbLink.displayName = "BreadcrumbLink"
 
+BreadcrumbLink.propTypes = {
+  asChild: PropTypes.bool,
+  className: PropTypes.string,
+}
+
 const BreadcrumbPage = React.forwardRef(({ className, ...props }, ref) => (
   <span
     ref={ref}
@@ -50,6 +67,10 @@ const BreadcrumbPage = React.forwardRef(({ className, ...props }, ref) => (
     {...props} />
 ))
 BreadcrumbPage.displayName = "BreadcrumbPage"
+
+BreadcrumbPage.propTypes = {
+  className: PropTypes.string,
+}
 
 const BreadcrumbSeparator = ({
   children,
@@ -66,6 +87,11 @@ const BreadcrumbSeparator = ({
 )
 BreadcrumbSeparator.displayName = "BreadcrumbSeparator"
 
+BreadcrumbSeparator.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const BreadcrumbEllipsis = ({
   className,
   ...props
@@ -80,6 +106,10 @@ const BreadcrumbEllipsis = ({
   </span>
 )
 BreadcrumbEllipsis.displayName = "BreadcrumbElipssis"
+
+BreadcrumbEllipsis.propTypes = {
+  className: PropTypes.string,
+}
 
 export {
   Breadcrumb,

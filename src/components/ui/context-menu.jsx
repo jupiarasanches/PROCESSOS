@@ -1,4 +1,5 @@
 import * as React from "react"
+import PropTypes from "prop-types"
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"
 import { Check, ChevronRight, Circle } from "lucide-react"
 
@@ -31,6 +32,12 @@ const ContextMenuSubTrigger = React.forwardRef(({ className, inset, children, ..
 ))
 ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName
 
+ContextMenuSubTrigger.propTypes = {
+  className: PropTypes.string,
+  inset: PropTypes.bool,
+  children: PropTypes.node,
+}
+
 const ContextMenuSubContent = React.forwardRef(({ className, ...props }, ref) => (
   <ContextMenuPrimitive.SubContent
     ref={ref}
@@ -41,6 +48,10 @@ const ContextMenuSubContent = React.forwardRef(({ className, ...props }, ref) =>
     {...props} />
 ))
 ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName
+
+ContextMenuSubContent.propTypes = {
+  className: PropTypes.string,
+}
 
 const ContextMenuContent = React.forwardRef(({ className, ...props }, ref) => (
   <ContextMenuPrimitive.Portal>
@@ -55,6 +66,10 @@ const ContextMenuContent = React.forwardRef(({ className, ...props }, ref) => (
 ))
 ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName
 
+ContextMenuContent.propTypes = {
+  className: PropTypes.string,
+}
+
 const ContextMenuItem = React.forwardRef(({ className, inset, ...props }, ref) => (
   <ContextMenuPrimitive.Item
     ref={ref}
@@ -66,6 +81,11 @@ const ContextMenuItem = React.forwardRef(({ className, inset, ...props }, ref) =
     {...props} />
 ))
 ContextMenuItem.displayName = ContextMenuPrimitive.Item.displayName
+
+ContextMenuItem.propTypes = {
+  className: PropTypes.string,
+  inset: PropTypes.bool,
+}
 
 const ContextMenuCheckboxItem = React.forwardRef(({ className, children, checked, ...props }, ref) => (
   <ContextMenuPrimitive.CheckboxItem
@@ -87,6 +107,12 @@ const ContextMenuCheckboxItem = React.forwardRef(({ className, children, checked
 ContextMenuCheckboxItem.displayName =
   ContextMenuPrimitive.CheckboxItem.displayName
 
+ContextMenuCheckboxItem.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+  checked: PropTypes.bool,
+}
+
 const ContextMenuRadioItem = React.forwardRef(({ className, children, ...props }, ref) => (
   <ContextMenuPrimitive.RadioItem
     ref={ref}
@@ -105,6 +131,11 @@ const ContextMenuRadioItem = React.forwardRef(({ className, children, ...props }
 ))
 ContextMenuRadioItem.displayName = ContextMenuPrimitive.RadioItem.displayName
 
+ContextMenuRadioItem.propTypes = {
+  className: PropTypes.string,
+  children: PropTypes.node,
+}
+
 const ContextMenuLabel = React.forwardRef(({ className, inset, ...props }, ref) => (
   <ContextMenuPrimitive.Label
     ref={ref}
@@ -117,6 +148,11 @@ const ContextMenuLabel = React.forwardRef(({ className, inset, ...props }, ref) 
 ))
 ContextMenuLabel.displayName = ContextMenuPrimitive.Label.displayName
 
+ContextMenuLabel.propTypes = {
+  className: PropTypes.string,
+  inset: PropTypes.bool,
+}
+
 const ContextMenuSeparator = React.forwardRef(({ className, ...props }, ref) => (
   <ContextMenuPrimitive.Separator
     ref={ref}
@@ -124,6 +160,10 @@ const ContextMenuSeparator = React.forwardRef(({ className, ...props }, ref) => 
     {...props} />
 ))
 ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName
+
+ContextMenuSeparator.propTypes = {
+  className: PropTypes.string,
+}
 
 const ContextMenuShortcut = ({
   className,
@@ -136,6 +176,10 @@ const ContextMenuShortcut = ({
   );
 }
 ContextMenuShortcut.displayName = "ContextMenuShortcut"
+
+ContextMenuShortcut.propTypes = {
+  className: PropTypes.string,
+}
 
 export {
   ContextMenu,

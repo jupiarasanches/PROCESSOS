@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -356,4 +357,12 @@ export default function TechnicianForm({
       </DialogContent>
     </Dialog>
   );
+}
+
+TechnicianForm.propTypes = {
+  technician: PropTypes.object,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  isEditing: PropTypes.bool,
 }

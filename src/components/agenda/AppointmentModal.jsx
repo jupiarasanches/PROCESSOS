@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -465,4 +466,13 @@ export default function AppointmentModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+AppointmentModal.propTypes = {
+  appointment: PropTypes.object,
+  processes: PropTypes.array.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  selectedDate: PropTypes.instanceOf(Date),
 }

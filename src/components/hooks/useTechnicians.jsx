@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User } from '@/api/entities';
+import { UsersService } from '@/services';
 
 export function useTechnicians() {
   const [technicians, setTechnicians] = useState([]);
@@ -10,9 +10,9 @@ export function useTechnicians() {
     setLoading(true);
     setError(null);
     try {
-      const userData = await User.list('-created_date');
-      setTechnicians(userData || []);
-      console.log('✅ Técnicos carregados:', userData?.length || 0);
+      const techniciansData = await UsersService.getTechnicians();
+      setTechnicians(techniciansData || []);
+      console.log('✅ Técnicos carregados:', techniciansData?.length || 0);
     } catch (err) {
       console.error('❌ Erro ao carregar técnicos:', err);
       setError(err);

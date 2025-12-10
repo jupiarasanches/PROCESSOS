@@ -1,4 +1,5 @@
 import * as React from "react"
+import PropTypes from "prop-types"
 import { OTPInput, OTPInputContext } from "input-otp"
 import { Minus } from "lucide-react"
 
@@ -13,10 +14,19 @@ const InputOTP = React.forwardRef(({ className, containerClassName, ...props }, 
 ))
 InputOTP.displayName = "InputOTP"
 
+InputOTP.propTypes = {
+  className: PropTypes.string,
+  containerClassName: PropTypes.string,
+}
+
 const InputOTPGroup = React.forwardRef(({ className, ...props }, ref) => (
   <div ref={ref} className={cn("flex items-center", className)} {...props} />
 ))
 InputOTPGroup.displayName = "InputOTPGroup"
+
+InputOTPGroup.propTypes = {
+  className: PropTypes.string,
+}
 
 const InputOTPSlot = React.forwardRef(({ index, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext)
@@ -42,6 +52,11 @@ const InputOTPSlot = React.forwardRef(({ index, className, ...props }, ref) => {
   );
 })
 InputOTPSlot.displayName = "InputOTPSlot"
+
+InputOTPSlot.propTypes = {
+  index: PropTypes.number.isRequired,
+  className: PropTypes.string,
+}
 
 const InputOTPSeparator = React.forwardRef(({ ...props }, ref) => (
   <div ref={ref} role="separator" {...props}>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -17,82 +18,66 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Save, X, Plus, Trash2 } from "lucide-react";
-import { User } from "@/api/entities";
+import { Save, X } from "lucide-react";
+import { AuthService } from "@/services";
 
-export default function NewProcessModal({ isOpen, onClose, onSubmit }) {
+export default function NewProcessModal({ isOpen, onClose, onSubmit, process }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     category: '',
     status: 'ativo',
-    owner: '',
-    priority: 'media',
-    sla_hours: 48,
-    steps: []
+    owner: ''
   });
-  
-  const [newStep, setNewStep] = useState({
-    name: '',
-    description: '',
-    responsible: '',
-    estimated_duration: 24,
-    required_fields: []
-  });
+ 
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       loadCurrentUser();
     }
   }, [isOpen]);
 
-  const loadCurrentUser = async () => {
-    try {
-      const user = await User.me();
-      setCurrentUser(user);
-      setFormData(prev => ({ ...prev, owner: user.email }));
-    } catch (error) {
-      console.error('Erro ao carregar usuário:', error);
-    }
-  };
-
-  const addStep = () => {
-    if (newStep.name && newStep.description) {
-      setFormData(prev => ({
-        ...prev,
-        steps: [...prev.steps, { ...newStep, id: Date.now() }]
-      }));
-      setNewStep({
-        name: '',
-        description: '',
-        responsible: '',
-        estimated_duration: 24,
-        required_fields: []
+  useEffect(() => {
+    if (isOpen && process) {
+      setFormData({
+        name: process.name || '',
+        description: process.description || '',
+        category: process.category || '',
+        status: process.status || 'ativo',
+        owner: process.owner || currentUser?.email || ''
       });
     }
+  }, [isOpen, process]);
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await AuthService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        setFormData(prev => ({ ...prev, owner: user.email || '' }));
+      } else {
+        setCurrentUser(null);
+      }
+    } catch (error) {
+      setCurrentUser(null);
+    }
   };
 
-  const removeStep = (stepId) => {
-    setFormData(prev => ({
-      ...prev,
-      steps: prev.steps.filter(step => step.id !== stepId)
-    }));
-  };
+  // Etapas removidas deste formulário
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      const processData = {
-        ...formData,
-        steps: formData.steps.map(({ id, ...step }) => step) // Remove id temporário
-      };
-      
-      await onSubmit(processData);
+      if (!currentUser) {
+        setIsSubmitting(false);
+        return;
+      }
+      await onSubmit(formData, process?.id);
       
       // Reset form
       setFormData({
@@ -100,10 +85,7 @@ export default function NewProcessModal({ isOpen, onClose, onSubmit }) {
         description: '',
         category: '',
         status: 'ativo',
-        owner: currentUser?.email || '',
-        priority: 'media',
-        sla_hours: 48,
-        steps: []
+        owner: currentUser?.email || ''
       });
     } catch (error) {
       console.error('Erro ao criar processo:', error);
@@ -118,17 +100,7 @@ export default function NewProcessModal({ isOpen, onClose, onSubmit }) {
       description: '',
       category: '',
       status: 'ativo',
-      owner: '',
-      priority: 'media',
-      sla_hours: 48,
-      steps: []
-    });
-    setNewStep({
-      name: '',
-      description: '',
-      responsible: '',
-      estimated_duration: 24,
-      required_fields: []
+      owner: ''
     });
     onClose();
   };
@@ -171,6 +143,8 @@ export default function NewProcessModal({ isOpen, onClose, onSubmit }) {
                   <SelectItem value="operacional">Operacional</SelectItem>
                   <SelectItem value="florestal">Florestal</SelectItem>
                   <SelectItem value="georreferenciamento">Georreferenciamento</SelectItem>
+                  <SelectItem value="agrimensura_topografico">Agrimensura/Levantamento Topográfico</SelectItem>
+                  <SelectItem value="regularizacao_fundiaria">Regularização Fundiária</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -188,119 +162,7 @@ export default function NewProcessModal({ isOpen, onClose, onSubmit }) {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="priority">Prioridade</Label>
-              <Select 
-                value={formData.priority} 
-                onValueChange={(value) => setFormData({...formData, priority: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="critica">Crítica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => setFormData({...formData, status: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
-                  <SelectItem value="em_revisao">Em Revisão</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="sla_hours">SLA (horas)</Label>
-              <Input
-                id="sla_hours"
-                type="number"
-                value={formData.sla_hours}
-                onChange={(e) => setFormData({...formData, sla_hours: parseInt(e.target.value)})}
-                placeholder="48"
-              />
-            </div>
-          </div>
-
-          {/* Etapas do Processo */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Etapas do Processo</h3>
-            
-            {/* Adicionar Nova Etapa */}
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-              <h4 className="font-medium mb-3">Adicionar Nova Etapa</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  placeholder="Nome da etapa"
-                  value={newStep.name}
-                  onChange={(e) => setNewStep({...newStep, name: e.target.value})}
-                />
-                <Input
-                  placeholder="Duração estimada (horas)"
-                  type="number"
-                  value={newStep.estimated_duration}
-                  onChange={(e) => setNewStep({...newStep, estimated_duration: parseInt(e.target.value)})}
-                />
-              </div>
-              <Textarea
-                placeholder="Descrição da etapa"
-                value={newStep.description}
-                onChange={(e) => setNewStep({...newStep, description: e.target.value})}
-                className="mt-3 h-20"
-              />
-              <Button 
-                type="button" 
-                onClick={addStep}
-                className="mt-3"
-                disabled={!newStep.name || !newStep.description}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar Etapa
-              </Button>
-            </div>
-
-            {/* Lista de Etapas */}
-            {formData.steps.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-medium">Etapas Configuradas ({formData.steps.length})</h4>
-                {formData.steps.map((step, index) => (
-                  <div key={step.id} className="bg-white p-4 rounded-lg border flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{index + 1}</Badge>
-                        <span className="font-medium">{step.name}</span>
-                        <Badge variant="secondary">{step.estimated_duration}h</Badge>
-                      </div>
-                      <p className="text-sm text-gray-600">{step.description}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeStep(step.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Campos removidos: Prioridade, Status, SLA e Etapas */}
 
           {/* Botões */}
           <div className="flex justify-end gap-3 pt-6 border-t">
@@ -319,11 +181,18 @@ export default function NewProcessModal({ isOpen, onClose, onSubmit }) {
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Save className="w-4 h-4 mr-2" />
-              {isSubmitting ? 'Criando...' : 'Criar Processo'}
+              {isSubmitting ? (process ? 'Atualizando...' : 'Criando...') : (process ? 'Atualizar Processo' : 'Criar Processo')}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
+}
+
+NewProcessModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  process: PropTypes.object,
 }

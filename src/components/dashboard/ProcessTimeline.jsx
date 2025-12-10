@@ -1,12 +1,13 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, CheckCircle, AlertCircle, Play } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function ProcessTimeline({ instances, processes }) {
-  const timelineData = React.useMemo(() => {
+  const timelineData = useMemo(() => {
     return instances
       .slice(0, 10) // Últimos 10 processos
       .map(instance => {
@@ -130,4 +131,8 @@ export default function ProcessTimeline({ instances, processes }) {
       </CardContent>
     </Card>
   );
+}
+ProcessTimeline.propTypes = {
+  instances: PropTypes.array.isRequired,
+  processes: PropTypes.array.isRequired,
 }

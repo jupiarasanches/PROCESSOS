@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Sparkles, Loader2, FileText } from "lucide-react";
@@ -216,4 +217,10 @@ export default function AISearch({ processes, instances, onResultSelect }) {
       )}
     </div>
   );
+}
+
+AISearch.propTypes = {
+  processes: PropTypes.array.isRequired,
+  instances: PropTypes.array.isRequired,
+  onResultSelect: PropTypes.func,
 }

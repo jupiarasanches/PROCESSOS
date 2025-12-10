@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, FileText } from "lucide-react";
@@ -69,4 +69,7 @@ export default function RecentActivity({ activities }) {
       </CardContent>
     </Card>
   );
+}
+RecentActivity.propTypes = {
+  activities: PropTypes.array.isRequired,
 }

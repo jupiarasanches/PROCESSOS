@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ export default function CalendarView({ appointments, processes, onAppointmentCli
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   // Adicionar dias da semana anterior e próxima para completar o calendário
   const startDate = new Date(monthStart);
@@ -28,12 +29,12 @@ export default function CalendarView({ appointments, processes, onAppointmentCli
     );
   };
 
-  const priorityColors = {
-    baixa: "bg-gray-100 text-gray-700",
-    media: "bg-blue-100 text-blue-700",
-    alta: "bg-orange-100 text-orange-700",
-    urgente: "bg-red-100 text-red-700"
-  };
+  // const priorityColors = {
+  //   baixa: "bg-gray-100 text-gray-700",
+  //   media: "bg-blue-100 text-blue-700",
+  //   alta: "bg-orange-100 text-orange-700",
+  //   urgente: "bg-red-100 text-red-700"
+  // };
 
   const statusColors = {
     agendado: "bg-blue-100 text-blue-800",
@@ -147,4 +148,11 @@ export default function CalendarView({ appointments, processes, onAppointmentCli
       </CardContent>
     </Card>
   );
+}
+
+CalendarView.propTypes = {
+  appointments: PropTypes.array.isRequired,
+  processes: PropTypes.array.isRequired,
+  onAppointmentClick: PropTypes.func.isRequired,
+  onDateClick: PropTypes.func.isRequired,
 }

@@ -1,13 +1,14 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Activity, AlertCircle } from "lucide-react";
+import { Users, AlertCircle } from "lucide-react";
+import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export default function TechnicianWorkload({ instances, technicians }) {
-  const workloadData = React.useMemo(() => {
+  const workloadData = useMemo(() => {
     return technicians.map(tech => {
       const techInstances = instances.filter(i => i.technician_responsible === tech.email);
       const active = techInstances.filter(i => i.status === 'em_andamento');
@@ -72,7 +73,7 @@ export default function TechnicianWorkload({ instances, technicians }) {
 
           {/* Lista detalhada */}
           <div className="space-y-3">
-            {workloadData.slice(0, 6).map((tech, index) => (
+            {workloadData.slice(0, 6).map((tech) => (
               <div key={tech.email} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-gray-900 text-sm truncate">
@@ -130,4 +131,8 @@ export default function TechnicianWorkload({ instances, technicians }) {
       </CardContent>
     </Card>
   );
+}
+TechnicianWorkload.propTypes = {
+  instances: PropTypes.array.isRequired,
+  technicians: PropTypes.array.isRequired,
 }

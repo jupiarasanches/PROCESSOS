@@ -1,0 +1,15 @@
+# Arquivos de configuração
+tailwind.config.js
+vite.config.js
+postcss.config.js
+
+# Diretórios de build
+dist/
+node_modules/
+
+# Arquivos de ambiente
+.env*
+
+# Arquivos de cache
+.cache/
+*.log

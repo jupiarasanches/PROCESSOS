@@ -1,11 +1,12 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ComposedChart } from 'recharts';
+import PropTypes from 'prop-types';
+import { useMemo } from 'react';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, ComposedChart } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 
 export default function ProcessStatusChart({ instances }) {
   // Preparar dados para os últimos 6 meses
-  const processChartData = React.useMemo(() => {
+  const processChartData = useMemo(() => {
     const months = [];
     const now = new Date();
     
@@ -52,6 +53,11 @@ export default function ProcessStatusChart({ instances }) {
     }
     return null;
   };
+CustomTooltip.propTypes = {
+  active: PropTypes.bool,
+  payload: PropTypes.array,
+  label: PropTypes.any,
+};
 
   return (
     <Card className="shadow-lg border-0">
@@ -134,4 +140,7 @@ export default function ProcessStatusChart({ instances }) {
       </CardContent>
     </Card>
   );
+}
+ProcessStatusChart.propTypes = {
+  instances: PropTypes.array.isRequired,
 }

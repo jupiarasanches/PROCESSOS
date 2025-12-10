@@ -1,6 +1,5 @@
 
-import React from 'react';
-import { User } from '@/api/entities';
+import { AuthService } from '@/services';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -24,22 +23,21 @@ import { toast } from 'sonner';
 export default function WelcomePage() {
   const handleLogin = async () => {
     try {
-      await User.login();
-      toast.success('Redirecionando para login...');
+      const user = await AuthService.getCurrentUser();
+      if (user) {
+        window.location.href = '/dashboard';
+        toast.success('Sessão ativa, redirecionando...');
+      } else {
+        toast.error('Nenhuma sessão ativa. Use o link de convite para criar acesso.');
+      }
     } catch (error) {
-      console.error('Erro ao iniciar login:', error);
-      toast.error('Erro ao acessar login. Tente novamente.');
+      console.error('Erro ao verificar sessão:', error);
+      toast.error('Erro ao verificar sessão.');
     }
   };
 
   const handleCreateAccount = async () => {
-    try {
-      await User.loginWithRedirect(window.location.origin + '/dashboard');
-      toast.success('Redirecionando para criação de conta...');
-    } catch (error) {
-      console.error('Erro ao criar conta:', error);
-      toast.error('Erro ao criar conta. Tente novamente.');
-    }
+    toast.info('Para criar uma conta, aceite um convite enviado ao seu e-mail.');
   };
 
   const features = [
@@ -190,7 +188,7 @@ export default function WelcomePage() {
 
                 <div className="mt-8 pt-6 border-t border-white/20">
                   <p className="text-blue-100 text-sm italic text-center">
-                    "O TaskFlow Pro transformou nossa equipe gerencial em apenas algumas semanas de uso. A ferramenta é intuitiva."
+                    &ldquo;O TaskFlow Pro transformou nossa equipe gerencial em apenas algumas semanas de uso. A ferramenta é intuitiva.&rdquo;
                   </p>
                   <div className="flex items-center justify-center mt-4 gap-3">
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">

@@ -1,21 +1,14 @@
 
-import React, { useState } from "react";
-import { User } from "@/api/entities";
-import { ProcessInstance } from "@/api/entities";
+import { useState } from "react";
 import ProcessInstanceManager from "../components/processes/ProcessInstanceManager";
 import ProcessInstanceModal from "../components/processes/ProcessInstanceModal";
 import { FolderOpen, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Hooks personalizados
 import { useProcesses } from "../components/hooks/useProcesses";
-import { useInstances } from "../components/hooks/useInstances";
+import { useProcessInstances } from "../components/hooks/useProcessInstances";
 import { useTechnicians } from "../components/hooks/useTechnicians";
 import { useAuditLog } from "../components/hooks/useAuditLog";
 
@@ -26,11 +19,12 @@ export default function InstancesPage() {
   // Hooks personalizados para dados
   const { processes } = useProcesses();
   const { technicians } = useTechnicians();
-  const { 
-    instances, 
+  const {
+    instances,
     loading: instancesLoading,
-    updateInstance 
-  } = useInstances(true);
+    updateInstance,
+    updateStatus
+  } = useProcessInstances();
   const { logUpdate, logStatusChange } = useAuditLog();
 
   const handleEdit = (instance) => {
@@ -41,28 +35,14 @@ export default function InstancesPage() {
   };
 
   const handleUpdateInstance = async (formData) => {
-    if (!selectedInstance) return; // Should not happen if modal is opened with selectedInstance
+    if (!selectedInstance) return;
 
-    const oldData = { ...selectedInstance }; // Capture old data for audit log
-    const currentUser = await User.me(); // Get current user once
+    const oldData = { ...selectedInstance };
 
     try {
-      const updatedProcessInstanceData = {
-        ...formData,
-        history: [
-          ...(selectedInstance.history || []),
-          {
-            step: selectedInstance.current_step,
-            action: 'atualizado', // Changed to 'atualizado' as per outline
-            user: currentUser.email,
-            timestamp: new Date().toISOString(),
-            comment: 'Processo atualizado'
-          }
-        ]
-      };
+      const updatedProcessInstanceData = { ...formData };
 
-      await ProcessInstance.update(selectedInstance.id, updatedProcessInstanceData);
-      updateInstance(selectedInstance.id, updatedProcessInstanceData); // Local state update in useInstances hook
+      await updateInstance(selectedInstance.id, updatedProcessInstanceData);
 
       // Log de auditoria
       await logUpdate(
@@ -88,41 +68,23 @@ export default function InstancesPage() {
     }
   };
 
-  const handleStatusChange = async (instance, newStatus) => { // Signature changed to pass full instance object
-    if (!instance) return;
-
-    const oldStatus = instance.status; // Capture old status for audit log and history
-    const currentUser = await User.me(); // Get current user once
-
-    // Optimistically update the UI *before* the API call
-    // Store the original state to revert if API fails
-    const originalInstance = { ...instance };
-    updateInstance(instance.id, { status: newStatus });
+  const handleStatusChange = async (instanceOrId, newStatus) => {
+    const id = typeof instanceOrId === 'object' ? instanceOrId.id : Number(instanceOrId);
+    if (!id) return;
+    const instance = typeof instanceOrId === 'object' 
+      ? instanceOrId 
+      : instances.find(i => String(i.id) === String(id));
+    const oldStatus = instance?.status || 'desconhecido';
 
     try {
-      const updatedHistoryEntry = {
-        step: instance.current_step, // Use current_step from the instance
-        action: 'status_alterado',
-        user: currentUser.email,
-        timestamp: new Date().toISOString(),
-        comment: `Status alterado de ${oldStatus} para ${newStatus}`
-      };
+      await updateStatus(id, newStatus);
 
-      await ProcessInstance.update(instance.id, {
-        status: newStatus,
-        history: [
-          ...(instance.history || []),
-          updatedHistoryEntry
-        ]
-      });
-
-      // Log de auditoria
       await logStatusChange(
         'ProcessInstance',
-        instance.id,
+        id,
         oldStatus,
         newStatus,
-        `Status do processo "${instance.title}" alterado de ${oldStatus} para ${newStatus}`
+        `Status do processo "${instance?.title || id}" alterado de ${oldStatus} para ${newStatus}`
       );
 
       toast.success("Status atualizado!", {
@@ -131,9 +93,7 @@ export default function InstancesPage() {
       });
     } catch (error) {
       console.error('Erro ao alterar status:', error);
-      // Revert the UI update if API fails
-      updateInstance(originalInstance.id, { status: originalInstance.status });
-      toast.error("Erro ao alterar status. Revertido.");
+      toast.error("Erro ao alterar status.");
     }
   };
 

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -8,8 +9,8 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { User } from "@/api/entities";
-import { UploadFile } from "@/api/integrations";
+import { AuthService } from "@/services";
+import { FileService } from "@/services/fileService";
 import { LogOut, Info, Loader2, Edit2, MessageCircle, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,10 +25,9 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   const loadUser = useCallback(async () => {
     try {
-      const user = await User.me();
+      const user = await AuthService.getCurrentUser();
       setCurrentUser(user);
     } catch (error) {
-      console.error("Erro ao carregar usuário:", error);
       onClose();
     }
   }, [onClose]);
@@ -44,8 +44,10 @@ export default function SettingsModal({ isOpen, onClose }) {
 
     setIsUploading(true);
     try {
-      const { file_url } = await UploadFile({ file });
-      await User.updateMyUserData({ profile_picture_url: file_url });
+      const [result] = await FileService.uploadFiles([file]);
+      if (!result?.success) throw new Error(result?.errors?.[0] || 'Falha no upload');
+      const file_url = result.document.file_url || result.document.url;
+      await AuthService.updateMyUserData({ profile_picture_url: file_url });
       setCurrentUser(prev => ({ ...prev, profile_picture_url: file_url }));
       toast.success("Foto de perfil atualizada!");
     } catch (error) {
@@ -58,7 +60,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   const handleLogout = async () => {
     try {
-      await User.logout();
+      await AuthService.logout();
       window.location.reload();
     } catch (error) {
       toast.error("Erro ao fazer logout.");
@@ -218,4 +220,9 @@ export default function SettingsModal({ isOpen, onClose }) {
       />
     </>
   );
+}
+
+SettingsModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 }

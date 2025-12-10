@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, User, MapPin, FileText, Clock } from "lucide-react";
@@ -84,4 +84,10 @@ export default function ProcessInstanceCard({ instance, processName, onClick }) 
       </CardContent>
     </Card>
   );
+}
+
+ProcessInstanceCard.propTypes = {
+  instance: PropTypes.object.isRequired,
+  processName: PropTypes.string,
+  onClick: PropTypes.func,
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
@@ -18,6 +18,7 @@ export default function StatCard({
     red: "text-red-600",
     purple: "text-purple-600"
   };
+  void colorClasses;
 
   const bgColorClasses = {
     blue: "bg-blue-50",
@@ -73,4 +74,13 @@ export default function StatCard({
       )}
     </Card>
   );
+}
+StatCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  icon: PropTypes.elementType.isRequired,
+  trend: PropTypes.oneOf(['up', 'down']),
+  trendValue: PropTypes.string,
+  color: PropTypes.oneOf(['blue','green','amber','red','purple']),
+  subtitle: PropTypes.string,
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ProcessInstanceService } from '../services/processService';
-import { User } from "@/api/entities";
+import { ProcessInstanceService, AuthService } from '@/services';
 
 export const useProcessInstances = () => {
   const [instances, setInstances] = useState([]);
@@ -25,64 +24,51 @@ export const useProcessInstances = () => {
     loadInstances();
   }, []);
 
-  const createInstance = async (data) => {
-    try {
-      const currentUser = await User.me();
-      
-      const instanceData = {
-        ...data,
-        requester: currentUser.email,
-        status: 'pendente',
-        current_step: 0,
-        history: [{
-          step: 0,
-          action: 'criado',
-          user: currentUser.email,
-          timestamp: new Date().toISOString(),
-          comment: `Processo iniciado${data.documents?.length ? ` com ${data.documents.length} documento(s)` : ''}`
-        }]
-      };
-
-      const newInstance = await ProcessInstanceService.createInstance(instanceData);
-      setInstances(prev => [newInstance, ...prev]);
-      return newInstance;
-    } catch (error) {
-      throw error;
-    }
+  const createInstance = async (formData) => {
+    const currentUser = await AuthService.getCurrentUser();
+    const newInstance = await ProcessInstanceService.createInstance(formData, currentUser);
+    setInstances(prev => [newInstance, ...prev]);
+    return newInstance;
   };
 
   const updateInstance = async (id, data) => {
-    try {
-      const updatedInstance = await ProcessInstanceService.updateInstance(id, data);
-      setInstances(prev => prev.map(inst => inst.id === id ? updatedInstance : inst));
-      return updatedInstance;
-    } catch (error) {
-      throw error;
-    }
+    const currentUser = await AuthService.getCurrentUser();
+    const updatedInstance = await ProcessInstanceService.updateInstance(id, data, currentUser);
+    setInstances(prev => prev.map(inst => inst.id === id ? updatedInstance : inst));
+    return updatedInstance;
   };
 
   const updateStatus = async (id, newStatus) => {
+    // Snapshot do estado anterior para rollback em caso de erro
+    const previousInstances = [...instances];
+
+    // Atualização Otimista: Atualiza a UI imediatamente antes da resposta do servidor
+    setInstances(prev => prev.map(inst => 
+      inst.id === id ? { ...inst, status: newStatus } : inst
+    ));
+
     try {
-      const instance = instances.find(i => i && i.id === id);
-      if (!instance) throw new Error('Instância não encontrada');
-
-      const optimisticInstance = { ...instance, status: newStatus };
-      setInstances(prev => prev.map(inst => inst && inst.id === id ? optimisticInstance : inst));
-
-      return optimisticInstance;
-    } catch (error) {
-      await loadInstances();
-      throw error;
+      const currentUser = await AuthService.getCurrentUser();
+      const updatedInstance = await ProcessInstanceService.updateInstanceStatus(id, newStatus, currentUser);
+      
+      // Confirmação: Atualiza com os dados reais do servidor (útil para campos como updated_at)
+      setInstances(prev => prev.map(inst => inst.id === id ? updatedInstance : inst));
+      return updatedInstance;
+    } catch (err) {
+      // Rollback: Reverte para o estado anterior se a API falhar
+      console.error("Erro ao atualizar status, revertendo mudança otimista:", err);
+      setInstances(previousInstances);
+      throw err;
     }
   };
 
   const deleteInstance = async (id) => {
-    try {
-      await ProcessInstanceService.deleteInstance(id);
-      setInstances(prev => prev.filter(inst => inst.id !== id));
-    } catch (error) {
-      throw error;
-    }
+    await ProcessInstanceService.deleteInstance(id);
+    setInstances(prev => prev.filter(inst => inst.id !== id));
+  };
+
+  const addInstance = (newInstance) => {
+    setInstances(prev => [newInstance, ...prev]);
   };
 
   return {
@@ -93,6 +79,7 @@ export const useProcessInstances = () => {
     createInstance,
     updateInstance,
     updateStatus,
-    deleteInstance
+    deleteInstance,
+    addInstance
   };
 };

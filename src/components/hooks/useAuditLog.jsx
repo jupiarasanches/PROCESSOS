@@ -1,69 +1,68 @@
-import { AuditLog } from "@/api/entities";
-import { User } from "@/api/entities";
+import { AuditLogService, AuthService } from '@/services';
 
 export function useAuditLog() {
   const logChange = async (entityType, entityId, action, changes, description, metadata = {}) => {
     try {
-      const currentUser = await User.me();
+      const currentUser = await AuthService.getCurrentUser();
       
-      await AuditLog.create({
-        entity_type: entityType,
-        entity_id: entityId,
-        action: action,
-        user_email: currentUser.email,
-        user_name: currentUser.full_name || currentUser.email,
-        changes: changes,
-        description: description,
-        metadata: metadata
-      });
+      await AuditLogService.logCustomAction(
+        entityType,
+        entityId,
+        action,
+        description,
+        currentUser,
+        { ...metadata, changes }
+      );
     } catch (error) {
       console.error('Erro ao registrar log de auditoria:', error);
     }
   };
 
   const logCreation = async (entityType, entityId, entityData, description) => {
-    await logChange(entityType, entityId, 'created', { new: entityData }, description);
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      const details = description || 'Criado novo registro';
+      await AuditLogService.logCustomAction(
+        entityType,
+        entityId,
+        'create',
+        details,
+        currentUser,
+        { entityData }
+      );
+    } catch (error) {
+      console.error('Erro ao registrar criação:', error);
+    }
   };
 
   const logUpdate = async (entityType, entityId, oldData, newData, description) => {
-    const changes = {
-      before: oldData,
-      after: newData,
-      fields: getChangedFields(oldData, newData)
-    };
-    await logChange(entityType, entityId, 'updated', changes, description);
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      void description;
+      await AuditLogService.logChange(entityType, entityId, oldData, newData, currentUser);
+    } catch (error) {
+      console.error('Erro ao registrar atualização:', error);
+    }
   };
 
   const logDeletion = async (entityType, entityId, entityData, description) => {
-    await logChange(entityType, entityId, 'deleted', { deleted: entityData }, description);
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      void entityData; void description;
+      await AuditLogService.logDeletion(entityType, entityId, currentUser);
+    } catch (error) {
+      console.error('Erro ao registrar deleção:', error);
+    }
   };
 
   const logStatusChange = async (entityType, entityId, oldStatus, newStatus, description) => {
-    await logChange(
-      entityType, 
-      entityId, 
-      'status_changed', 
-      { 
-        before: { status: oldStatus }, 
-        after: { status: newStatus } 
-      }, 
-      description
-    );
-  };
-
-  const getChangedFields = (oldData, newData) => {
-    const changed = {};
-    
-    Object.keys(newData).forEach(key => {
-      if (JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])) {
-        changed[key] = {
-          old: oldData[key],
-          new: newData[key]
-        };
-      }
-    });
-
-    return changed;
+    try {
+      const currentUser = await AuthService.getCurrentUser();
+      void description;
+      await AuditLogService.logStatusChange(entityType, entityId, oldStatus, newStatus, currentUser);
+    } catch (error) {
+      console.error('Erro ao registrar mudança de status:', error);
+    }
   };
 
   return {

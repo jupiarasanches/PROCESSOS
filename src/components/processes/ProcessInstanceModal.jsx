@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +23,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Loader2, Save, X, Upload, FileText, Trash2 } from "lucide-react";
-import { User } from "@/api/entities";
-import { UploadFile } from "@/api/integrations";
+import { UsersService } from "@/services";
+import { FileService } from "@/services/fileService";
 import { toast } from "sonner";
 
 export default function ProcessInstanceModal({ 
@@ -70,10 +71,9 @@ export default function ProcessInstanceModal({
 
   const loadTechnicians = async () => {
     try {
-      const users = await User.filter({ is_technician: true });
+      const users = await UsersService.getTechnicians();
       setTechnicians(users);
     } catch (error) {
-      console.error('Erro ao carregar técnicos:', error);
       setTechnicians([]);
     }
   };
@@ -113,13 +113,15 @@ export default function ProcessInstanceModal({
         }
 
         try {
-          const { file_url } = await UploadFile({ file });
+          const [result] = await FileService.uploadFiles([file]);
+          if (!result?.success) throw new Error(result?.errors?.[0] || 'Falha no upload');
+          const doc = result.document;
           return {
-            name: file.name,
-            url: file_url,
-            type: file.type,
-            size: file.size,
-            uploaded_at: new Date().toISOString()
+            name: doc.name,
+            url: doc.file_url || doc.url,
+            type: doc.type,
+            size: doc.size,
+            uploaded_at: doc.uploaded_at
           };
         } catch (error) {
           toast.error(`Erro ao fazer upload de ${file.name}.`);
@@ -471,4 +473,11 @@ export default function ProcessInstanceModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+ProcessInstanceModal.propTypes = {
+  instance: PropTypes.object,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 }

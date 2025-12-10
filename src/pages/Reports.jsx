@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,10 +35,10 @@ import {
   FileText,
   Download,
   Calendar,
-  Sparkles, // Added new icon
-  Wand2 // Added new icon
+  Sparkles,
+  Wand2
 } from "lucide-react";
-import { format, differenceInDays, differenceInHours, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, differenceInDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 // Added new imports for AI features
@@ -54,7 +54,7 @@ import {
 
 // Hooks personalizados
 import { useProcesses } from "../components/hooks/useProcesses";
-import { useInstances } from "../components/hooks/useInstances";
+import { useProcessInstances } from "../components/hooks/useProcessInstances";
 import { useTechnicians } from "../components/hooks/useTechnicians";
 
 const COLORS = {
@@ -67,19 +67,9 @@ const COLORS = {
   pink: '#ec4899'
 };
 
-const CHART_COLORS = [
-  COLORS.primary,
-  COLORS.success,
-  COLORS.warning,
-  COLORS.danger,
-  COLORS.purple,
-  COLORS.teal,
-  COLORS.pink
-];
-
 export default function ReportsPage() {
   const { processes } = useProcesses();
-  const { instances } = useInstances();
+  const { instances } = useProcessInstances();
   const { technicians } = useTechnicians();
   
   const [dateRange, setDateRange] = useState('30'); // últimos 30 dias
@@ -260,7 +250,9 @@ export default function ReportsPage() {
     { value: 'agronegocio', label: 'Agronegócio' },
     { value: 'operacional', label: 'Operacional' },
     { value: 'florestal', label: 'Florestal' },
-    { value: 'georreferenciamento', label: 'Georreferenciamento' }
+    { value: 'georreferenciamento', label: 'Georreferenciamento' },
+    { value: 'agrimensura_topografico', label: 'Agrimensura/Levantamento Topográfico' },
+    { value: 'regularizacao_fundiaria', label: 'Regularização Fundiária' }
   ];
 
   const handleDashboardGenerated = (dashboard) => {

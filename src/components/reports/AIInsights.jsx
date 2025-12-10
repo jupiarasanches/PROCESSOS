@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,12 +9,14 @@ import { base44 } from "@/api/base44Client";
 export default function AIInsights({ instances, processes, technicians }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(false);
+  void processes; void technicians;
 
-  useEffect(() => {
-    if (instances.length > 0) {
-      generateInsights();
-    }
-  }, [instances]);
+useEffect(() => {
+  if (instances.length > 0) {
+    generateInsights();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [instances]);
 
   const generateInsights = async () => {
     setLoading(true);
@@ -263,4 +266,10 @@ Forneça uma análise concisa e acionável em português.`,
       </div>
     </div>
   );
+}
+
+AIInsights.propTypes = {
+  instances: PropTypes.array.isRequired,
+  processes: PropTypes.array.isRequired,
+  technicians: PropTypes.array.isRequired,
 }

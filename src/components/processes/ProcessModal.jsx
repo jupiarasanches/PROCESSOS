@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatFileSize } from "../utils/formatters";
 import {
   Select,
   SelectContent,
@@ -23,8 +25,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Save, X, Upload, FileText, Trash2, Mail, MessageCircle, Clock, Loader2 } from "lucide-react";
-import { User } from "@/api/entities";
-import { UploadFile } from "@/api/integrations";
+import { UsersService } from "@/services";
+import { FileService } from "@/services/fileService";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
@@ -39,6 +41,7 @@ export default function ProcessModal({
     client_company: '',
     technician_responsible: '',
     priority: 'media',
+    property_name: '',
     area_hectares: '',
     municipality: '',
     due_date: null,
@@ -77,6 +80,7 @@ export default function ProcessModal({
         client_company: '',
         technician_responsible: '',
         priority: 'media',
+        property_name: '',
         area_hectares: '',
         municipality: '',
         due_date: null,
@@ -94,15 +98,10 @@ export default function ProcessModal({
 
   const loadTechnicians = async () => {
     try {
-      const users = await User.filter({ is_technician: true });
+      const users = await UsersService.getTechnicians();
       setTechnicians(users);
     } catch (error) {
-      console.error('Erro ao carregar técnicos:', error);
-      setTechnicians([
-        { email: 'joao.silva@empresa.com', full_name: 'João Silva', department: 'ambiental' },
-        { email: 'maria.santos@empresa.com', full_name: 'Maria Santos', department: 'operacional' },
-        { email: 'carlos.oliveira@empresa.com', full_name: 'Carlos Oliveira', department: 'agronegocio' }
-      ]);
+      setTechnicians([]);
     }
   };
 
@@ -141,13 +140,15 @@ export default function ProcessModal({
         }
 
         try {
-          const { file_url } = await UploadFile({ file });
+          const [result] = await FileService.uploadFiles([file]);
+          if (!result?.success) throw new Error(result?.errors?.[0] || 'Falha no upload');
+          const doc = result.document;
           return {
-            name: file.name,
-            url: file_url,
-            type: file.type,
-            size: file.size,
-            uploaded_at: new Date().toISOString()
+            name: doc.name,
+            url: doc.file_url || doc.url,
+            type: doc.type,
+            size: doc.size,
+            uploaded_at: doc.uploaded_at
           };
         } catch (error) {
           toast.error(`Erro ao fazer upload de ${file.name}.`);
@@ -175,20 +176,13 @@ export default function ProcessModal({
     toast.info("Documento removido.");
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.title.trim()) newErrors.title = 'Título é obrigatório';
     if (!formData.client_company.trim()) newErrors.client_company = 'Cliente/Empresa é obrigatório';
     if (!formData.technician_responsible) newErrors.technician_responsible = 'Técnico responsável é obrigatório';
+    if (!formData.property_name.trim()) newErrors.property_name = 'Propriedade é obrigatória';
     if (!formData.municipality.trim()) newErrors.municipality = 'Município é obrigatório';
     if (!formData.due_date) newErrors.due_date = 'Prazo final é obrigatório';
 
@@ -228,6 +222,7 @@ export default function ProcessModal({
       client_company: '',
       technician_responsible: '',
       priority: 'media',
+      property_name: '',
       area_hectares: '',
       municipality: '',
       due_date: null,
@@ -325,25 +320,19 @@ export default function ProcessModal({
               {errors.technician_responsible && <p className="text-red-500 text-xs mt-1">{errors.technician_responsible}</p>}
             </div>
 
-            {/* Prioridade */}
+            {/* Propriedade */}
             <div>
-              <Label htmlFor="priority" className="text-sm font-semibold text-slate-700">
-                Prioridade
+              <Label htmlFor="property_name" className="text-sm font-semibold text-slate-700">
+                Propriedade
               </Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value) => handleInputChange('priority', value)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="baixa">Baixa</SelectItem>
-                  <SelectItem value="media">Média</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="critica">Crítica</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="property_name"
+                value={formData.property_name}
+                onChange={(e) => handleInputChange('property_name', e.target.value)}
+                className={`mt-1 ${errors.property_name ? 'border-red-500' : ''}`}
+                placeholder="Ex: Fazenda Eldorado I"
+              />
+              {errors.property_name && <p className="text-red-500 text-xs mt-1">{errors.property_name}</p>}
             </div>
 
             {/* Área em Hectares */}
@@ -651,4 +640,11 @@ export default function ProcessModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+ProcessModal.propTypes = {
+  process: PropTypes.object.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 }

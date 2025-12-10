@@ -1,4 +1,5 @@
 import * as React from "react";
+import PropTypes from "prop-types";
 import { cva } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,8 +10,11 @@ const ToastProvider = React.forwardRef(({ ...props }, ref) => (
     className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
     {...props}
   />
-));
+))
 ToastProvider.displayName = "ToastProvider";
+
+ToastProvider.propTypes = {
+}
 
 const ToastViewport = React.forwardRef(({ ...props }, ref) => (
   <div
@@ -18,8 +22,11 @@ const ToastViewport = React.forwardRef(({ ...props }, ref) => (
     className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
     {...props}
   />
-));
+))
 ToastViewport.displayName = "ToastViewport";
+
+ToastViewport.propTypes = {
+}
 
 const toastVariants = cva(
   "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
@@ -48,6 +55,11 @@ const Toast = React.forwardRef(({ className, variant, ...props }, ref) => {
 });
 Toast.displayName = "Toast";
 
+Toast.propTypes = {
+  className: PropTypes.string,
+  variant: PropTypes.oneOf(["default", "destructive"]),
+}
+
 const ToastAction = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
@@ -60,6 +72,10 @@ const ToastAction = React.forwardRef(({ className, ...props }, ref) => (
 ));
 ToastAction.displayName = "ToastAction";
 
+ToastAction.propTypes = {
+  className: PropTypes.string,
+}
+
 const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
   <button
     ref={ref}
@@ -67,13 +83,17 @@ const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
       "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
       className
     )}
-    toast-close=""
+    data-toast-close=""
     {...props}
   >
     <X className="h-4 w-4" />
   </button>
 ));
 ToastClose.displayName = "ToastClose";
+
+ToastClose.propTypes = {
+  className: PropTypes.string,
+}
 
 const ToastTitle = React.forwardRef(({ className, ...props }, ref) => (
   <div
@@ -84,6 +104,10 @@ const ToastTitle = React.forwardRef(({ className, ...props }, ref) => (
 ));
 ToastTitle.displayName = "ToastTitle";
 
+ToastTitle.propTypes = {
+  className: PropTypes.string,
+}
+
 const ToastDescription = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
@@ -92,6 +116,10 @@ const ToastDescription = React.forwardRef(({ className, ...props }, ref) => (
   />
 ));
 ToastDescription.displayName = "ToastDescription";
+
+ToastDescription.propTypes = {
+  className: PropTypes.string,
+}
 
 export {
   ToastProvider,
