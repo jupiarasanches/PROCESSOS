@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { SimcarService } from '@/services';
+import { SimcarService, PreferencesService } from '@/services';
 import { 
   Table, 
   TableBody, 
@@ -306,17 +306,29 @@ export default function SimcarManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [statusFilter, setStatusFilter] = useState(() => {
-    return localStorage.getItem('simcar_status_filter') || 'all';
-  });
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     loadData();
+    loadPreferences();
   }, []);
 
-  const handleStatusFilterChange = (value) => {
+  const handleStatusFilterChange = async (value) => {
     setStatusFilter(value);
-    localStorage.setItem('simcar_status_filter', value);
+    await PreferencesService.setSimcarPreferences({
+      simcar_status_filter: value,
+      simcar_search_term: searchTerm
+    });
+  };
+
+  const loadPreferences = async () => {
+    try {
+      const prefs = await PreferencesService.getSimcarPreferences();
+      if (prefs) {
+        setStatusFilter(prefs.simcar_status_filter || 'all');
+        setSearchTerm(prefs.simcar_search_term || '');
+      }
+    } catch {}
   };
 
   const loadData = async () => {
@@ -422,7 +434,14 @@ export default function SimcarManagement() {
                 placeholder="Buscar..." 
                 className="pl-10 w-64"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={async (e) => {
+                  const val = e.target.value;
+                  setSearchTerm(val);
+                  await PreferencesService.setSimcarPreferences({
+                    simcar_status_filter: statusFilter,
+                    simcar_search_term: val
+                  });
+                }}
               />
             </div>
             <Button variant="outline" onClick={loadData}>

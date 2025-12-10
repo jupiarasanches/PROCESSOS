@@ -35,7 +35,18 @@ class SimcarService {
         }
       }
 
-      return instances.map(instance => {
+      // Fallback: se relação não trouxe detalhes, buscar diretamente por instance_id
+      const instancesWithDetails = await Promise.all(instances.map(async (inst) => {
+        if (Array.isArray(inst.simcar_details) && inst.simcar_details.length > 0) return inst;
+        const { data: directDetails } = await supabase
+          .from('simcar_details')
+          .select('*')
+          .eq('instance_id', inst.id)
+          .maybeSingle();
+        return { ...inst, simcar_details: directDetails ? [directDetails] : [] };
+      }));
+
+      return instancesWithDetails.map(instance => {
         const details = instance.simcar_details?.[0] || {}; 
         const techEmail = details.technician_responsible || instance.technician_responsible;
         const techName = techniciansMap[techEmail] || techEmail; // Usa nome se tiver, senão email

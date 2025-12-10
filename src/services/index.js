@@ -8,3 +8,4 @@ export { default as AppointmentService } from './appointmentService';
 export { notificationService } from './notificationService';
 export { FileService } from './fileService';
 export { default as SimcarService } from './simcarService';
+export { default as PreferencesService } from './preferencesService';
